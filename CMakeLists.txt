@@ -3,21 +3,21 @@ cmake_minimum_required(VERSION 3.0)
 
 
 # 项目信息
-project(RS_edr)
+project(EC_edr)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
 add_subdirectory(lib)
 
-aux_source_directory(./src RS_edr_SRCS)
+aux_source_directory(./src EC_edr_SRCS)
 
-ADD_LIBRARY(RS_edr ${RS_edr_SRCS})
-add_dependencies(RS_edr build_isal)
+ADD_LIBRARY(EC_edr ${EC_edr_SRCS})
+add_dependencies(EC_edr build_isal)
 link_directories( isa-l/bin)
 include_directories( lib/isa-l/include)
-TARGET_LINK_LIBRARIES(RS_edr isal)
+TARGET_LINK_LIBRARIES(EC_edr isal)
 
-target_include_directories(RS_edr PUBLIC src)
+target_include_directories(EC_edr PUBLIC src)
 
 AUX_SOURCE_DIRECTORY(./test test_SRCS)
 foreach (FILE_PATH ${test_SRCS})
@@ -25,7 +25,7 @@ foreach (FILE_PATH ${test_SRCS})
     STRING(REGEX REPLACE ".+/(.+)\\..*" "\\1" FILE_NAME ${FILE_PATH})
     # MESSAGE(${FILE_NAME})
     add_executable(${FILE_NAME} ${FILE_PATH})
-    TARGET_LINK_LIBRARIES(${FILE_NAME} RS_edr)
+    TARGET_LINK_LIBRARIES(${FILE_NAME} EC_edr)
 
     add_custom_target(run_${FILE_NAME}
             DEPENDS ${FILE_NAME}
