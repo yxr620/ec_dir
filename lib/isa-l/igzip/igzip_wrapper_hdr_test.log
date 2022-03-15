@@ -1,0 +1,4 @@
+Test Seed  : 4660
+Randoms    : 16384
+gzip wrapper test: Error Code 12: Incorrect name found
+PASS igzip/igzip_wrapper_hdr_test (exit status: 0)
