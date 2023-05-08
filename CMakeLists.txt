@@ -13,7 +13,7 @@ aux_source_directory(./src EC_edr_SRCS)
 
 ADD_LIBRARY(EC_edr ${EC_edr_SRCS})
 add_dependencies(EC_edr build_isal)
-link_directories( isa-l/bin)
+link_directories( lib/isa-l/bin)
 include_directories( lib/isa-l/include)
 TARGET_LINK_LIBRARIES(EC_edr isal)
 
