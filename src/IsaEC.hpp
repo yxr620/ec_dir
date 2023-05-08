@@ -4,6 +4,7 @@
 #include <cstring>
 #include <vector>
 #include <limits.h>
+#include <pthread.h>
 #include "erasure_code.h"
 
 using namespace std;
@@ -11,10 +12,15 @@ using namespace std;
 typedef unsigned char u8;
 typedef vector<vector<u8> > vvc_u8;
 
+
 class IsaEC
 {
 private:
-    int n, k, m, maxSize;
+    int n; // data 
+    int k; // check
+    int m; // total
+    int maxSize;
+    int thread_num;
     u8 *encode_matrix; // 编码矩阵（生成矩阵）
     u8 *decode_matrix; // 解码矩阵
     u8 *invert_matrix; // 逆矩阵
@@ -23,9 +29,10 @@ private:
     u8 *decode_index;  // 解码矩阵的索引
 
 public:
-    IsaEC(int n_, int k_, int maxSize_);
+    IsaEC(int n_, int k_, int maxSize_, int thread_num_=4);
     ~IsaEC();
     bool encode(vvc_u8 &in, vvc_u8 &out, size_t size);
+    bool encode_ptr(u8 **in, u8 **out, size_t size);
     bool decode(vvc_u8 &matrix, int err_num, u8 *err_list, size_t size);
     int getMinSize();
 
@@ -97,3 +104,4 @@ public:
         return 0;
     }
 };
+
