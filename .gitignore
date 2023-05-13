@@ -4,10 +4,4 @@ bin
 *.lo
 igzip
 .vscode
-result/2_1_1G.txt
-result/2_1_128M.txt
-result/10_4_128M.txt
-result/20_4_128M.txt
-result/40_4_128M.txt
-result/80_4_32M.txt
-result/160_4_32M.txt
+result/

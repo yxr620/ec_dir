@@ -16,8 +16,8 @@ typedef vector<vector<u8> > vvc_u8;
 class IsaEC
 {
 private:
-    int n; // data 
-    int k; // check
+    int n; // check 
+    int k; // data
     int m; // total
     int maxSize;
     int thread_num;
@@ -34,6 +34,7 @@ public:
     bool encode(vvc_u8 &in, vvc_u8 &out, size_t size);
     bool encode_ptr(u8 **in, u8 **out, size_t size);
     bool decode(vvc_u8 &matrix, int err_num, u8 *err_list, size_t size);
+    bool decode_ptr(u8 **matrix, int err_num, u8 *err_list, size_t size);
     int getMinSize();
 
     /*

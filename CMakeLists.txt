@@ -19,6 +19,8 @@ TARGET_LINK_LIBRARIES(EC_edr isal)
 
 target_include_directories(EC_edr PUBLIC src)
 
+# target_compile_options(EC_edr PUBLIC -O3)
+
 AUX_SOURCE_DIRECTORY(./test test_SRCS)
 foreach (FILE_PATH ${test_SRCS})
     # MESSAGE(${FILE_PATH})

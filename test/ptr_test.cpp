@@ -31,20 +31,52 @@ void print_ma(vvc_u8 matrix)
     }
 }
 
+void print_ptr(u8 **matrix, int line, int col)
+{
+    cout<<"Binary"<<endl;
+    for(int i = 0; i < line; ++i)
+    {
+        for(int j = 0; j < col; ++j)
+        {
+            cout<<bitset<sizeof(matrix[i][j])*8>(matrix[i][j])<<' ';
+        }
+        cout<<endl;
+    }
+    cout<<"hex"<<endl;
+    for(int i = 0; i < line; ++i)
+    {
+        for(int j = 0; j < col; ++j)
+        {
+            cout<<hex<<(int)matrix[i][j]<<' ';
+        }
+        cout<<endl;
+    }
+}
+
 int main()
 {
     int k = 20, n = 4, maxSize = 1024; // n：数据条带数量 k：校验条带数量
     size_t len = 1024 * 1024 * 128;                  // len：条带长度 2147483647 357913941
     size_t size = k * len;
     int thread_num = 1;
-    vvc_u8 in, out; // in：测试输入 out：ec输出
+    u8 **in, **out; // in：测试输入 out：ec输出
+    u8 *tmp_in, *tmp_out;
     int seed = 100;
     srand(seed);
     cout << "------------------------ 随机初始化原数据中 ------------------------" << endl;
+    in = (u8 **)calloc(k, sizeof(u8*));
+    out = (u8 **)calloc(n, sizeof(u8*));
+
+    // posix_memalign((void **)&tmp_in, 4096, k * len * sizeof(u8));
+    // posix_memalign((void **)&tmp_out, 4096, n * len * sizeof(u8));
+    tmp_in = (u8 *)calloc(k * len * 2, sizeof(u8));
+    tmp_out = (u8 *)calloc(n * len * 2, sizeof(u8));
+    vvc_u8 vec_in, vec_out;
+
+
     for (int i = 0; i < k; i++)
     {
-        in.push_back(vector<unsigned char>(len));
-        // in[i].resize(len);
+        in[i] = &tmp_in[i * len];
         // for (size_t j = 0; j < len; j++)
         // {
         //     in[i][j] = rand() % 255;
@@ -52,15 +84,13 @@ int main()
     }
     for (int i = 0; i < n; i++)
     {
-        out.push_back(vector<unsigned char>(len));
-        // out[i].resize(len);
+        out[i] = &tmp_out[i * len];
         // for (size_t j = 0; j < len; j++)
         // {
         //     out[i][j] = 255;
         // }
     }
     
-    // check address
     // for (int i = 0; i < k; ++i)
     // {
     //     printf("%p ", &in[i][0]);
@@ -69,24 +99,38 @@ int main()
     // {
     //     printf("%p ", &out[i][0]);
     // }
+    // print_ptr(in, k, len);
     cout << "------------------------ 开始计算EC ------------------------" << endl;
 
-    // print_ma(in);
+
     // EC校验的计算, maxSize = len / 4
     IsaEC ec(k, n, maxSize, thread_num);
+    // ec.encode_ptr(in, out, size);
     // EC校验的计算
     start = chrono::high_resolution_clock::now();
-    ec.encode(in, out, size);
+    ec.encode_ptr(in, out, size);
     _end = chrono::high_resolution_clock::now();
     
     // print_ma(out);
     chrono::duration<double> _duration = _end - start;
     printf("time: %fs \n", _duration.count());
     printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
+    // print_ptr(out, n, len);
 
-    vvc_u8 matrix;
-    matrix.insert(matrix.end(), in.begin(), in.end());
-    matrix.insert(matrix.end(), out.begin(), out.end());
+    u8 **matrix = (u8 **)calloc(k + n, sizeof(u8 *));
+    for (int i = 0; i < k + n; ++i)
+    {
+        matrix[i] = (u8 *)calloc(len, sizeof(u8));
+        if(i < k)
+        {
+            memcpy(matrix[i], in[i], len);
+        }
+        else
+        {
+            memcpy(matrix[i], out[i - k], len);
+        }
+    }
+    // print_ptr(matrix, k + n, len);
 
     int err_num = n;
     unsigned char err_list[err_num];
@@ -101,11 +145,11 @@ int main()
             matrix[(int)i][j] = 255;
         }
     }
-
+    // print_ptr(matrix, k + n, len);
     cout << "------------------------ decode ------------------------" << endl;
 
     start = chrono::high_resolution_clock::now();
-    ec.decode(matrix, err_num, err_list, size);
+    ec.decode_ptr(matrix, err_num, err_list, size);
     _end = chrono::high_resolution_clock::now();
 
 
