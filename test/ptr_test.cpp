@@ -55,8 +55,8 @@ void print_ptr(u8 **matrix, int line, int col)
 
 int main()
 {
-    int k = 20, n = 4, maxSize = 1024; // n：数据条带数量 k：校验条带数量
-    size_t len = 1024 * 1024 * 128;                  // len：条带长度 2147483647 357913941
+    int k = 2, n = 1, maxSize = 8; // n：数据条带数量 k：校验条带数量
+    size_t len = 8;                  // len：条带长度 2147483647 357913941
     size_t size = k * len;
     int thread_num = 1;
     u8 **in, **out; // in：测试输入 out：ec输出
@@ -69,27 +69,36 @@ int main()
 
     // posix_memalign((void **)&tmp_in, 4096, k * len * sizeof(u8));
     // posix_memalign((void **)&tmp_out, 4096, n * len * sizeof(u8));
-    tmp_in = (u8 *)calloc(k * len * 2, sizeof(u8));
-    tmp_out = (u8 *)calloc(n * len * 2, sizeof(u8));
+    // tmp_in = (u8 *)calloc(k * len * 2, sizeof(u8));
+    // tmp_out = (u8 *)calloc(n * len * 2, sizeof(u8));
     vvc_u8 vec_in, vec_out;
-
 
     for (int i = 0; i < k; i++)
     {
-        in[i] = &tmp_in[i * len];
-        // for (size_t j = 0; j < len; j++)
-        // {
-        //     in[i][j] = rand() % 255;
-        // }
+        vec_in.push_back(vector<unsigned char>(len));
+        in[i] = vec_in[i].data();
     }
     for (int i = 0; i < n; i++)
     {
-        out[i] = &tmp_out[i * len];
-        // for (size_t j = 0; j < len; j++)
-        // {
-        //     out[i][j] = 255;
-        // }
+        vec_out.push_back(vector<unsigned char>(len));
+        out[i] = vec_out[i].data();
     }
+    // for (int i = 0; i < k; i++)
+    // {
+    //     in[i] = &tmp_in[i * len];
+    //     // for (size_t j = 0; j < len; j++)
+    //     // {
+    //     //     in[i][j] = rand() % 255;
+    //     // }
+    // }
+    // for (int i = 0; i < n; i++)
+    // {
+    //     out[i] = &tmp_out[i * len];
+    //     // for (size_t j = 0; j < len; j++)
+    //     // {
+    //     //     out[i][j] = 255;
+    //     // }
+    // }
     
     // for (int i = 0; i < k; ++i)
     // {

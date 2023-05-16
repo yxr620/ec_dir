@@ -124,7 +124,7 @@ int main(int argc, char *argv[])
 	for (i = 0; i < nerrs; i++)
 		src_in_err[src_err_list[i]] = 1;
 
-	// Allocate the arrays
+	// Allocate the arrays, input
 	for (i = 0; i < m; i++) {
 		if (posix_memalign(&buf, 64, TEST_LEN(m))) {
 			printf("alloc error: Fail\n");
@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
 		buffs[i] = buf;
 	}
 
-	for (i = 0; i < (m - k); i++) {
+	for (i = 0; i < (m - k); i++) { // output data
 		if (posix_memalign(&buf, 64, TEST_LEN(m))) {
 			printf("alloc error: Fail\n");
 			return -1;
