@@ -55,7 +55,7 @@ void print_ptr(u8 **matrix, int line, int col)
 
 int main()
 {
-    int k = 160, n = 4, maxSize = 1024; // n：数据条带数量 k：校验条带数量
+    int k = 160, n = 4, maxSize = 1024 * 1024 * 32; // n：数据条带数量 k：校验条带数量
     size_t len = 1024 * 1024 * 32;                  // len：条带长度 2147483647 357913941
     size_t size = k * len;
     int thread_num = 1;
@@ -67,12 +67,6 @@ int main()
     in = (u8 **)calloc(k, sizeof(u8*));
     out = (u8 **)calloc(n, sizeof(u8*));
 
-    // posix_memalign((void **)&tmp_in, 64, k * len * sizeof(u8));
-    // posix_memalign((void **)&tmp_out, 64, n * len * sizeof(u8));
-    // tmp_in = (u8 *)calloc(k * len * 2, sizeof(u8));
-    // tmp_out = (u8 *)calloc(n * len * 2, sizeof(u8));
-
-
     for (int i = 0; i < k; i++)
     {
         posix_memalign((void **)&tmp, 64, len * sizeof(u8));
@@ -83,8 +77,34 @@ int main()
         posix_memalign((void **)&tmp, 64, len * sizeof(u8));
         out[i] = tmp;
     }
-    
 
+    // posix_memalign((void **)&tmp_in, 64, k * (len * sizeof(u8)  + 128*8-128)  ) ;
+    // posix_memalign((void **)&tmp_out, 64, n * len * sizeof(u8));
+    // tmp_in = (u8 *)malloc(k * len * sizeof(u8));
+    // tmp_out = (u8 *)malloc(n * len * sizeof(u8));
+    // // printf("end malloc\n");
+    // for(int i = 0; i < k; ++i)
+    // {
+    //     in[i] = &tmp_in[i * (len)];
+    // }
+    // for (int i = 0; i < n; ++i)
+    // {
+    //     out[i] = &tmp_out[i * len];
+    // }
+
+    for (int i = 0; i < k; i++)
+    {
+        for (size_t j = 0; j < len; j++)
+        {
+            in[i][j] = rand() % 255;
+        }
+    }
+
+    // for (int i = 0; i < k; ++i)
+    // {
+    //     printf("%p ", in[i]);
+    // }
+    // exit(0);
     cout << "------------------------ 开始计算EC ------------------------" << endl;
 
 
