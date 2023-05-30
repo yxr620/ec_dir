@@ -28,6 +28,8 @@ private:
     u8 *g_tbls;        // 辅助编码表格
     u8 *decode_index;  // 解码矩阵的索引
 
+    u8 *g_tbls_decode; //g_tbls for decoding
+
 public:
     IsaEC(int n_, int k_, int maxSize_, int thread_num_=4);
     ~IsaEC();
@@ -35,6 +37,8 @@ public:
     bool encode_ptr(u8 **in, u8 **out, size_t size);
     bool decode(vvc_u8 &matrix, int err_num, u8 *err_list, size_t size);
     bool decode_ptr(u8 **matrix, int err_num, u8 *err_list, size_t size);
+    bool cache_g_tbls(int err_num, u8 *err_list);
+    bool cache_decode_ptr(u8 **matrix, int err_num, u8 *err_list, size_t size);
     int getMinSize();
 
     /*

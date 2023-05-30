@@ -43,7 +43,7 @@
 # ifndef TEST_CUSTOM
 // Uncached test.  Pull from large mem base.
 #  define TEST_SOURCES 256
-#  define GT_L3_CACHE  32 * 1024 * 1024 * 164LL	/* some number > last level cache */
+#  define GT_L3_CACHE  8 * 1024 * 1024 * 164LL	/* some number > last level cache */
 #  define TEST_LEN(m)  ((GT_L3_CACHE / m) & ~(64-1))
 #  define TEST_TYPE_STR "_cold"
 # else
@@ -107,6 +107,7 @@ int main(int argc, char *argv[])
 	struct perf start;
 
 	// Pick test parameters
+	srand(time(NULL));
 	m = 164;
 	k = 160;
 	nerrs = 4;
@@ -132,7 +133,6 @@ int main(int argc, char *argv[])
 		}
 		buffs[i] = buf;
 	}
-
 	for (i = 0; i < (m - k); i++) { // output data
 		if (posix_memalign(&buf, 64, TEST_LEN(m))) {
 			printf("alloc error: Fail\n");
@@ -142,9 +142,10 @@ int main(int argc, char *argv[])
 	}
 
 	// Make random data
-	// for (i = 0; i < k; i++)
-	// 	for (j = 0; j < TEST_LEN(m); j++)
-	// 		buffs[i][j] = rand();
+	for (i = 0; i < k; i++)
+        memset(buffs[i], rand(), TEST_LEN(m));
+		// for (j = 0; j < TEST_LEN(m); j++)
+		// 	buffs[i][j] = rand();
 
 	gf_gen_rs_matrix(a, m, k);
 
@@ -157,6 +158,17 @@ int main(int argc, char *argv[])
 	printf("erasure_code_encode" TEST_TYPE_STR ": ");
 	perf_print(start, (long long)(TEST_LEN(m)) * (m));
 
+	ec_encode_perf(m, k, a, g_tbls, buffs, &start);
+	printf("erasure_code_encode" TEST_TYPE_STR ": ");
+	perf_print(start, (long long)(TEST_LEN(m)) * (m));
+
+	ec_encode_perf(m, k, a, g_tbls, buffs, &start);
+	printf("erasure_code_encode" TEST_TYPE_STR ": ");
+	perf_print(start, (long long)(TEST_LEN(m)) * (m));
+
+	ec_encode_perf(m, k, a, g_tbls, buffs, &start);
+	printf("erasure_code_encode" TEST_TYPE_STR ": ");
+	perf_print(start, (long long)(TEST_LEN(m)) * (m));
 
 
 	// Start decode test
