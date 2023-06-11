@@ -110,3 +110,34 @@ public:
     }
 };
 
+class scheduler
+{
+    private:
+    int k, n;
+    uint64_t total_size;        // the original total size
+    uint64_t strip_len; // the length of every strip
+    uint64_t append_total_size; // k * append_total_size;
+    uint64_t append_len;        // the length append to the last strip
+    uint64_t chunk_size;
+
+    u8 **strip_first_ptr;   // ptr if using strip first scheduler
+    u8 ***stripe_first_ptr; // ptr if usie stripe first scheduler
+
+    void initialize_para(int k, int n, uint64_t total_size, uint64_t chunk_size=-1);
+
+    public:
+    scheduler(int k, int n, uint64_t total_size, uint64_t chunk_size=-1);
+    u8 **strip_first_continue(u8 *data);
+    u8 **strip_first_order(u8 *data);
+    // stripe wise scheduler with fixed chunk size & output buffer inside
+    u8 ***stripe_first_outinside(u8 *data);
+    u8 ***stripe_first_dynamic(u8 *data);
+
+    // basic function
+    uint64_t get_strip_len() {return strip_len;};
+    uint64_t get_append_total_size() {return append_total_size;}
+    uint64_t get_chunk_size() {return chunk_size;}
+
+};
+
+u8 ***scheduler_stripe_first(int k, int n, int total_size, u8 *data);

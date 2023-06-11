@@ -7,29 +7,6 @@ using namespace std;
 
 chrono::time_point<std::chrono::high_resolution_clock> start, _end;
 
-void print_ma(vvc_u8 matrix)
-{
-    int line = matrix.size();
-    int col = matrix[0].size();
-    cout<<"Binary"<<endl;
-    for(int i = 0; i < line; ++i)
-    {
-        for(int j = 0; j < col; ++j)
-        {
-            cout<<bitset<sizeof(matrix[i][j])*8>(matrix[i][j])<<' ';
-        }
-        cout<<endl;
-    }
-    cout<<"hex"<<endl;
-    for(int i = 0; i < line; ++i)
-    {
-        for(int j = 0; j < col; ++j)
-        {
-            cout<<hex<<(int)matrix[i][j]<<' ';
-        }
-        cout<<endl;
-    }
-}
 
 void print_ptr(u8 **matrix, int line, int col)
 {
@@ -55,57 +32,39 @@ void print_ptr(u8 **matrix, int line, int col)
 
 int main()
 {
-    int k = 10, n = 4; // n：数据条带数量 k：校验条带数量
-    size_t len = 1024 * 1024 * 32; // len：条带长度
-    size_t maxSize = 256; // chunk size
-    size_t size = k * maxSize;
+    int k = 10, n = 4, maxSize = 4096; // n：数据条带数量 k：校验条带数量
+    size_t len = 1024 * 1024;                  // len：条带长度 2147483647 357913941
+    size_t size = 1024 * 1024 * k;
     int thread_num = 1;
-    u8 ***in, ***incopy; // in：测试输入 out：ec输出
-    u8 *tmp_in, *tmp_out, *tmp;
     int seed = 100;
     srand(seed);
-    cout << "------------------------ 随机初始化原数据中 ------------------------" << endl;
 
-/*
-The memory follows the following pattern
+    cout << "------------------------ Initializing data ------------------------" << endl;
+    
+    u8 ***in, ***incopy; // in：测试输入 out：ec输出
+    u8 *data;
+    data = (u8 *)calloc(size, sizeof(u8));
+    for (int i = 0; i < size; ++i) data[i] = rand();
+    scheduler sch(k, n, size, maxSize);
+    in = sch.stripe_first_outinside(data);
 
-|<-maxSize->|<-maxSize->| ...   |<-maxSize->| ...
-|in chunk   | in chunk  | ...   | out chunk | ...
+    printf("finish scheduler\n");
 
-*/
-    in = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
-    incopy = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
+    // modify the len and size
+    len = sch.get_strip_len();
+    size = sch.get_append_total_size();
+    maxSize = sch.get_chunk_size();
 
-    for (int i = 0; i < len / maxSize; i++)
-    {
-        in[i] = (u8 **)calloc(k + n, sizeof(u8 *));
-        incopy[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+    cout << "------------------------ EC encoding ------------------------" << endl;
 
-        for (int j = 0; j < k + n; ++j)
-        {
-            posix_memalign((void **)&tmp, 64, maxSize);
-            in[i][j] = tmp;
-            posix_memalign((void **)&tmp, 64, maxSize);
-            incopy[i][j] = tmp;
-        }
-    }
-
-    for (int i = 0; i < len / maxSize; ++i)
-    {
-        for(int j = 0; j < k + n; ++j)
-            memset(in[i][j], rand(), maxSize);
-            // for(int x = 0; x < maxSize; ++x)
-            //     in[i][j][x] = rand();
-    }
-
-    cout << "------------------------ 开始计算EC ------------------------" << endl;
-
+    // print_ptr(in[10], 14, maxSize);
     IsaEC ec(k, n, maxSize, thread_num);
     // EC校验的计算
     start = chrono::high_resolution_clock::now();
     for (int i = 0; i < len / maxSize; ++i)
     {
-        ec.encode_ptr(in[i], &in[i][k], size);
+        // printf("i %d\n", i);
+        ec.encode_ptr(in[i], &in[i][k], maxSize);
     }
     _end = chrono::high_resolution_clock::now();
     chrono::duration<double> _duration = _end - start;
@@ -115,7 +74,7 @@ The memory follows the following pattern
     start = chrono::high_resolution_clock::now();
     for (int i = 0; i < len / maxSize; ++i)
     {
-        ec.encode_ptr(in[i], &in[i][k], size);
+        ec.encode_ptr(in[i], &in[i][k], maxSize);
     }
     _end = chrono::high_resolution_clock::now();
     _duration = _end - start;
@@ -125,39 +84,29 @@ The memory follows the following pattern
     start = chrono::high_resolution_clock::now();
     for (int i = 0; i < len / maxSize; ++i)
     {
-        ec.encode_ptr(in[i], &in[i][k], size);
+        ec.encode_ptr(in[i], &in[i][k], maxSize);
     }
     _end = chrono::high_resolution_clock::now();
     _duration = _end - start;
     printf("time: %fs \n", _duration.count());
     printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
 
-    start = chrono::high_resolution_clock::now();
-    for (int i = 0; i < len / maxSize; ++i)
+    u8 *tmp;
+    incopy = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
+    for (int i = 0; i < len / maxSize; i++)
     {
-        ec.encode_ptr(in[i], &in[i][k], size);
+        incopy[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+        for (int j = 0; j < k + n; ++j)
+        {
+            posix_memalign((void **)&tmp, 64, maxSize);
+            incopy[i][j] = tmp;
+        }
     }
-    _end = chrono::high_resolution_clock::now();
-    _duration = _end - start;
-    printf("time: %fs \n", _duration.count());
-    printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
-
-    start = chrono::high_resolution_clock::now();
-    for (int i = 0; i < len / maxSize; ++i)
-    {
-        ec.encode_ptr(in[i], &in[i][k], size);
-    }
-    _end = chrono::high_resolution_clock::now();
-    _duration = _end - start;
-    printf("time: %fs \n", _duration.count());
-    printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
-
     for (int i = 0; i < len / maxSize; ++i)
     {
         for(int j = 0; j < k + n; ++j)
             memcpy(incopy[i][j], in[i][j], maxSize);
     }
-
     int err_num = n;
     unsigned char err_list[err_num];
     for(int i = 0; i < err_num; ++i)
@@ -171,9 +120,8 @@ The memory follows the following pattern
             memset(in[i][j], 0, maxSize);
         }
     }
-
-    // print_ptr(in[0], k + n, maxSize);
     // print_ptr(incopy[0], k + n, maxSize);
+    // print_ptr(in[0], k + n, maxSize);
     cout << " ------------------------ decode ------------------------ " << endl;
 
     ec.cache_g_tbls(err_num, err_list);
@@ -181,7 +129,7 @@ The memory follows the following pattern
     start = chrono::high_resolution_clock::now();
     for (int i = 0; i < len / maxSize; ++i)
     {
-        ec.cache_decode_ptr(in[i], err_num, err_list, size);
+        ec.cache_decode_ptr(in[i], err_num, err_list, maxSize);
     }
     _end = chrono::high_resolution_clock::now();
     _duration = _end - start;
