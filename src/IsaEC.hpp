@@ -132,6 +132,7 @@ class scheduler
     // stripe wise scheduler with fixed chunk size & output buffer inside
     u8 ***stripe_first_outinside(u8 *data);
     u8 ***stripe_first_dynamic(u8 *data);
+    u8 ***stripe_frist_continue(u8 *data);
 
     // basic function
     uint64_t get_strip_len() {return strip_len;};

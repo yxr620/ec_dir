@@ -33,7 +33,7 @@
 #include "erasure_code.h"
 #include "test.h"
 
-//#define CACHED_TEST1
+#define CACHED_TEST1
 #ifdef CACHED_TEST
 // Cached test, loop many times over small dataset
 # define TEST_SOURCES 32
@@ -108,8 +108,8 @@ int main(int argc, char *argv[])
 
 	// Pick test parameters
 	srand(time(NULL));
-	m = 164;
-	k = 160;
+	m = 14;
+	k = 10;
 	nerrs = 4;
 	const u8 err_list[] = { 2, 4, 5, 7 };
 

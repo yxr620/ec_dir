@@ -34,7 +34,7 @@ void print_ma(vvc_u8 matrix)
 int main()
 {
     int k = 10, n = 4, maxSize = 1024; // n：数据条带数量 k：校验条带数量
-    size_t len = 1024 * 1024 * 128;                  // len：条带长度 2147483647 357913941
+    size_t len = 1024 * 1024 *512;                  // len：条带长度 2147483647 357913941
     size_t size = k * len;
     int thread_num = 1;
     vvc_u8 in, out; // in：测试输入 out：ec输出

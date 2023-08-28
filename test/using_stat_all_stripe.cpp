@@ -24,42 +24,73 @@ static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
     return ret;
 }
 
-int main()
+int main(int argc,char *argv[])
 {
-    int k = 160, n = 4; // n：数据条带数量 k：校验条带数量
-    size_t maxSize = 1024 * 4; // 4k chunk size
-    size_t len = 1024 * 1024 * 32; 
-    size_t size = k * len;
+    int k = atoi(argv[1]), n = 4; // n：数据条带数量 k：校验条带数量
+    size_t len = 1024*1024*32; // len：条带长度
+    size_t maxSize = atoi(argv[2]); // chunk size
+    size_t size = k * maxSize;
     int thread_num = 1;
-    u8 **in, **out; // in：测试输入 out：ec输出
+    u8 ***in, ***incopy; // in：测试输入 out：ec输出
     u8 *tmp_in, *tmp_out, *tmp;
-    int seed = time(NULL);
+    int seed = 100;
     srand(seed);
+    cout << "------------------------ k:"<<k<<"maxSixe: "<<maxSize<<"------------------------"<< endl;
     cout << "------------------------ 随机初始化原数据中 ------------------------" << endl;
-    in = (u8 **)calloc(k, sizeof(u8*));
-    out = (u8 **)calloc(n, sizeof(u8*));
 
-    // seperate memory malloc
-    for (int i = 0; i < k; i++)
+/*
+The memory follows the following pattern
+
+|<-maxSize->|<-maxSize->| ...   |<-maxSize->| ...
+|in chunk   | in chunk  | ...   | out chunk | ...
+
+*/
+    // in = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
+    // incopy = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
+
+    // for (int i = 0; i < len / maxSize; i++)
+    // {
+    //     in[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+    //     incopy[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+
+    //     for (int j = 0; j < k + n; ++j)
+    //     {
+    //         posix_memalign((void **)&tmp, 64, maxSize);
+    //         in[i][j] = tmp;
+    //         posix_memalign((void **)&tmp, 64, maxSize);
+    //         incopy[i][j] = tmp;
+    //     }
+    // }
+
+    tmp_in = (u8 *)calloc(len * (k + n), sizeof(u8));
+    in = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
+    incopy = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
+
+    for (int i = 0; i < len / maxSize; i++)
     {
-        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
-        in[i] = tmp;
-    }
-    for (int i = 0; i < n; i++)
-    {
-        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
-        out[i] = tmp;
+        in[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+        incopy[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+
+        for (int j = 0; j < k + n; ++j)
+        {
+            posix_memalign((void **)&tmp, 64, maxSize);
+            in[i][j] = tmp;
+            posix_memalign((void **)&tmp, 64, maxSize);
+            incopy[i][j] = tmp;
+        }
     }
 
-    for (int i = 0; i < k; i++)
+
+    for (int i = 0; i < len / maxSize; ++i)
     {
-        // memset(in[i], rand(), len);
-        for (size_t j = 0; j < len; j++)
-            in[i][j] = rand() % 255;
+        for(int j = 0; j < k + n; ++j)
+            memset(in[i][j], rand(), maxSize);
+            // for(int x = 0; x < maxSize; ++x)
+            //     in[i][j][x] = rand();
     }
-    for (int i = 0; i < n; ++i)
-        // memset(out[i], 0, len);
-        for (size_t j = 0; j < len; ++j) out[i][j] = 0;
+
+    // exit(0);
+    cout << "------------------------ 开始计算EC ------------------------" << endl;
 
     IsaEC ec(k, n, maxSize, thread_num);
 
@@ -93,7 +124,10 @@ int main()
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, size);
+        for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
@@ -125,7 +159,10 @@ int main()
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, size);
+         for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
@@ -156,7 +193,10 @@ int main()
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, size);
+         for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
@@ -187,7 +227,10 @@ int main()
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, size);
+         for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
@@ -226,7 +269,10 @@ int main()
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, size);
+         for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
@@ -234,6 +280,7 @@ int main()
 
     ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
     read(fd, &instruction_scache, sizeof(long long));
+
     printf("instruction cache misses: %lld\n", instruction_scache);
     close(fd);
 

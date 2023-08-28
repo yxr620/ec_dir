@@ -278,6 +278,11 @@ u8 **scheduler::strip_first_order(u8 *data)
     return strip_first_ptr;
 }
 
+u8 ***scheduler::stripe_frist_continue(u8 *data)
+{
+    
+}
+
 u8 ***scheduler::stripe_first_outinside(u8 *data)
 {
     uint64_t stripe_size = (k) * chunk_size;

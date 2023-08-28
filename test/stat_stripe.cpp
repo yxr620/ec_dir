@@ -1,3 +1,7 @@
+#include "IsaEC.hpp"
+#include <iostream>
+#include <chrono>
+#include <bitset>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -5,16 +9,9 @@
 #include <linux/perf_event.h>
 #include <sys/ioctl.h>  
 #include <asm/unistd.h>
-#include "IsaEC.hpp"
-#include <iostream>
-#include <chrono>
-#include <bitset>
 
 using namespace std;
-
 chrono::time_point<std::chrono::high_resolution_clock> start, _end;
-
-
 static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
                             int cpu, int group_fd, unsigned long flags)
 {
@@ -24,47 +21,116 @@ static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
     return ret;
 }
 
+
+void print_ptr(u8 **matrix, int line, int col)
+{
+    cout<<"Binary"<<endl;
+    for(int i = 0; i < line; ++i)
+    {
+        for(int j = 0; j < col; ++j)
+        {
+            cout<<bitset<sizeof(matrix[i][j])*8>(matrix[i][j])<<' ';
+        }
+        cout<<endl;
+    }
+    cout<<"hex"<<endl;
+    for(int i = 0; i < line; ++i)
+    {
+        for(int j = 0; j < col; ++j)
+        {
+            cout<<hex<<(int)matrix[i][j]<<' ';
+        }
+        cout<<endl;
+    }
+}
+
 int main()
 {
     int k = 160, n = 4; // n：数据条带数量 k：校验条带数量
-    size_t maxSize = 1024 * 4; // 4k chunk size
-    size_t len = 1024 * 1024 * 32; 
-    size_t size = k * len;
+    size_t len = 1024 * 1024 * 32; // len：条带长度
+    size_t maxSize = 1024 * 4; // chunk size
+    size_t size = k * maxSize;
     int thread_num = 1;
-    u8 **in, **out; // in：测试输入 out：ec输出
+    u8 ***in, ***incopy; // in：测试输入 out：ec输出
     u8 *tmp_in, *tmp_out, *tmp;
-    int seed = time(NULL);
+    int seed = 100;
     srand(seed);
     cout << "------------------------ 随机初始化原数据中 ------------------------" << endl;
-    in = (u8 **)calloc(k, sizeof(u8*));
-    out = (u8 **)calloc(n, sizeof(u8*));
 
-    // seperate memory malloc
-    for (int i = 0; i < k; i++)
+/*
+The memory follows the following pattern
+
+|<-maxSize->|<-maxSize->| ...   |<-maxSize->| ...
+|in chunk   | in chunk  | ...   | out chunk | ...
+
+*/
+    // in = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
+    // incopy = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
+
+    // for (int i = 0; i < len / maxSize; i++)
+    // {
+    //     in[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+    //     incopy[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+    //     for (int j = 0; j < k + n; ++j)
+    //     {
+    //         posix_memalign((void **)&tmp, 64, maxSize);
+    //         in[i][j] = tmp;
+    //         posix_memalign((void **)&tmp, 64, maxSize);
+    //         incopy[i][j] = tmp;
+    //     }
+    // }
+
+
+
+    tmp_in = (u8 *)calloc(len * (k + n), sizeof(u8));
+    in = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
+    incopy = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
+
+    for (int i = 0; i < len / maxSize; i++)
     {
-        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
-        in[i] = tmp;
-    }
-    for (int i = 0; i < n; i++)
-    {
-        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
-        out[i] = tmp;
+        in[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+        incopy[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+
+        for (int j = 0; j < k + n; ++j)
+        {
+            in[i][j] = &tmp_in[i * maxSize * (k + n) + j * maxSize];
+            posix_memalign((void **)&tmp, 64, maxSize);
+            incopy[i][j] = tmp;
+        }
     }
 
-    for (int i = 0; i < k; i++)
+    // print the first 10 stripe add
+    // for (int i = 0; i < 10; ++i)
+    // {
+    //     printf("%d: %p ", i, in[i][0]);
+    // }
+    // exit(0);
+
+    for (int i = 0; i < len / maxSize; ++i)
     {
-        // memset(in[i], rand(), len);
-        for (size_t j = 0; j < len; j++)
-            in[i][j] = rand() % 255;
+        for(int j = 0; j < k + n; ++j)
+            memset(in[i][j], rand(), maxSize);
+            // for(int x = 0; x < maxSize; ++x)
+            //     in[i][j][x] = rand();
     }
-    for (int i = 0; i < n; ++i)
-        // memset(out[i], 0, len);
-        for (size_t j = 0; j < len; ++j) out[i][j] = 0;
+
+    // exit(0);
+    cout << "------------------------ 开始计算EC ------------------------" << endl;
 
     IsaEC ec(k, n, maxSize, thread_num);
-
-
-
+    // EC校验的计算
+    for (int i = 0; i < 5; ++i)
+    {
+        start = chrono::high_resolution_clock::now();
+        for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
+        _end = chrono::high_resolution_clock::now();
+        chrono::duration<double> _duration = _end - start;
+        printf("time: %fs \n", _duration.count());
+        printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
+    }
 
     long long count, misses, cycles, instructions,instruction_scache;
     int fd;
@@ -93,7 +159,10 @@ int main()
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, size);
+        for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
@@ -125,7 +194,10 @@ int main()
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, size);
+        for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
@@ -156,12 +228,14 @@ int main()
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, size);
+        for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
     }
-
     ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
     read(fd, &instructions, sizeof(long long));
     printf("instructions: %lld\n", instructions);
@@ -187,7 +261,10 @@ int main()
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, size);
+        for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
@@ -222,16 +299,17 @@ int main()
 
     ioctl(fd, PERF_EVENT_IOC_RESET, 0);
     ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
-
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, size);
+        for (int i = 0; i < len / maxSize; ++i)
+        {
+            ec.encode_ptr(in[i], &in[i][k], size);
+        }
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
     }
-
     ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
     read(fd, &instruction_scache, sizeof(long long));
     printf("instruction cache misses: %lld\n", instruction_scache);

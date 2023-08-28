@@ -2,10 +2,37 @@
 #include <iostream>
 #include <chrono>
 #include <bitset>
+#include<stdio.h>
+#include<stdlib.h>
+#include <thread>
 
 using namespace std;
 
 chrono::time_point<std::chrono::high_resolution_clock> start, _end;
+
+void print_ma(vvc_u8 matrix)
+{
+    int line = matrix.size();
+    int col = matrix[0].size();
+    cout<<"Binary"<<endl;
+    for(int i = 0; i < line; ++i)
+    {
+        for(int j = 0; j < col; ++j)
+        {
+            cout<<bitset<sizeof(matrix[i][j])*8>(matrix[i][j])<<' ';
+        }
+        cout<<endl;
+    }
+    cout<<"hex"<<endl;
+    for(int i = 0; i < line; ++i)
+    {
+        for(int j = 0; j < col; ++j)
+        {
+            cout<<hex<<(int)matrix[i][j]<<' ';
+        }
+        cout<<endl;
+    }
+}
 
 void print_ptr(u8 **matrix, int line, int col)
 {
@@ -29,17 +56,18 @@ void print_ptr(u8 **matrix, int line, int col)
     }
 }
 
-int main()
+int main(int argc,char *argv[])
 {
-    int k = 160, n = 4; // n：数据条带数量 k：校验条带数量
+    int k = atoi(argv[1]), n = 4; // n：数据条带数量 k：校验条带数量
     size_t len = 1024 * 1024 * 32; // len：条带长度
-    size_t maxSize = 1024 * 64; // chunk size
+    size_t maxSize = atoi(argv[2]); // chunk size
     size_t size = k * maxSize;
     int thread_num = 1;
     u8 ***in, ***incopy; // in：测试输入 out：ec输出
     u8 *tmp_in, *tmp_out, *tmp;
     int seed = 100;
     srand(seed);
+    cout << "---------------k: "<<k<<" maxSize: "<<maxSize<<"---------------"<< endl;
     cout << "------------------------ 随机初始化原数据中 ------------------------" << endl;
 
 /*
@@ -56,6 +84,7 @@ The memory follows the following pattern
     {
         in[i] = (u8 **)calloc(k + n, sizeof(u8 *));
         incopy[i] = (u8 **)calloc(k + n, sizeof(u8 *));
+
         for (int j = 0; j < k + n; ++j)
         {
             posix_memalign((void **)&tmp, 64, maxSize);
@@ -65,32 +94,6 @@ The memory follows the following pattern
         }
     }
 
-
-
-    // tmp_in = (u8 *)calloc(len * (k + n), sizeof(u8));
-    // in = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
-    // incopy = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
-
-    // for (int i = 0; i < len / maxSize; i++)
-    // {
-    //     in[i] = (u8 **)calloc(k + n, sizeof(u8 *));
-    //     incopy[i] = (u8 **)calloc(k + n, sizeof(u8 *));
-
-    //     for (int j = 0; j < k + n; ++j)
-    //     {
-    //         in[i][j] = &tmp_in[i * maxSize * (k + n) + j * maxSize];
-    //         posix_memalign((void **)&tmp, 64, maxSize);
-    //         incopy[i][j] = tmp;
-    //     }
-    // }
-
-    // print the first 10 stripe add
-    // for (int i = 0; i < 10; ++i)
-    // {
-    //     printf("%d: %p ", i, in[i][0]);
-    // }
-    // exit(0);
-
     for (int i = 0; i < len / maxSize; ++i)
     {
         for(int j = 0; j < k + n; ++j)
@@ -99,25 +102,59 @@ The memory follows the following pattern
             //     in[i][j][x] = rand();
     }
 
-    // exit(0);
     cout << "------------------------ 开始计算EC ------------------------" << endl;
 
     IsaEC ec(k, n, maxSize, thread_num);
     // EC校验的计算
-    for (int i = 0; i < 5; ++i)
+    start = chrono::high_resolution_clock::now();
+    for (int i = 0; i < len / maxSize; ++i)
     {
-        start = chrono::high_resolution_clock::now();
-        for (int i = 0; i < len / maxSize; ++i)
-        {
-            ec.encode_ptr(in[i], &in[i][k], size);
-        }
-        _end = chrono::high_resolution_clock::now();
-        chrono::duration<double> _duration = _end - start;
-        printf("time: %fs \n", _duration.count());
-        printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
+        ec.encode_ptr(in[i], &in[i][k], size);
     }
+    _end = chrono::high_resolution_clock::now();
+    chrono::duration<double> _duration = _end - start;
+    printf("time: %fs \n", _duration.count());
+    printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
 
+    start = chrono::high_resolution_clock::now();
+    for (int i = 0; i < len / maxSize; ++i)
+    {
+        ec.encode_ptr(in[i], &in[i][k], size);
+    }
+    _end = chrono::high_resolution_clock::now();
+    _duration = _end - start;
+    printf("time: %fs \n", _duration.count());
+    printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
 
+    start = chrono::high_resolution_clock::now();
+    for (int i = 0; i < len / maxSize; ++i)
+    {
+        ec.encode_ptr(in[i], &in[i][k], size);
+    }
+    _end = chrono::high_resolution_clock::now();
+    _duration = _end - start;
+    printf("time: %fs \n", _duration.count());
+    printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
+
+    start = chrono::high_resolution_clock::now();
+    for (int i = 0; i < len / maxSize; ++i)
+    {
+        ec.encode_ptr(in[i], &in[i][k], size);
+    }
+    _end = chrono::high_resolution_clock::now();
+    _duration = _end - start;
+    printf("time: %fs \n", _duration.count());
+    printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
+
+    start = chrono::high_resolution_clock::now();
+    for (int i = 0; i < len / maxSize; ++i)
+    {
+        ec.encode_ptr(in[i], &in[i][k], size);
+    }
+    _end = chrono::high_resolution_clock::now();
+    _duration = _end - start;
+    printf("time: %fs \n", _duration.count());
+    printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
 
     for (int i = 0; i < len / maxSize; ++i)
     {
@@ -139,6 +176,8 @@ The memory follows the following pattern
         }
     }
 
+    // print_ptr(in[0], k + n, maxSize);
+    // print_ptr(incopy[0], k + n, maxSize);
     cout << " ------------------------ decode ------------------------ " << endl;
 
     ec.cache_g_tbls(err_num, err_list);
@@ -149,14 +188,14 @@ The memory follows the following pattern
         ec.cache_decode_ptr(in[i], err_num, err_list, size);
     }
     _end = chrono::high_resolution_clock::now();
-    chrono::duration<double> _duration = _end - start;
+    _duration = _end - start;
     printf("decode time: %fs \n", _duration.count());
     printf("total data: %ld MB, speed %lf MB/s \n", (n + k) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
 
     // print_ptr(in[0], k + n, maxSize);
     for (auto i: err_list)
     {
-        if(incopy[2][i][0] != in[2][i][0])
+        if(incopy[0][i][0] != in[0][i][0])
         {
             cout<<"err: NOT EQUAL "<<(int)i<<endl;
             return -1;
