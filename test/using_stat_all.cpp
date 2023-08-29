@@ -40,15 +40,27 @@ int main()
     out = (u8 **)calloc(n, sizeof(u8*));
 
     // seperate memory malloc
+    // for (int i = 0; i < k; i++)
+    // {
+    //     posix_memalign((void **)&tmp, 64, len * sizeof(u8));
+    //     in[i] = tmp;
+    // }
+    // for (int i = 0; i < n; i++)
+    // {
+    //     posix_memalign((void **)&tmp, 64, len * sizeof(u8));
+    //     out[i] = tmp;
+    // }
+
+    // continus memory malloc
+    posix_memalign((void **)&tmp_in, 64, k * len * sizeof(u8));
+    posix_memalign((void **)&tmp_out, 64, n * len * sizeof(u8));
     for (int i = 0; i < k; i++)
     {
-        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
-        in[i] = tmp;
+        in[i] = tmp_in + i * len;
     }
     for (int i = 0; i < n; i++)
     {
-        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
-        out[i] = tmp;
+        out[i] = tmp_out + i * len;
     }
 
     for (int i = 0; i < k; i++)
@@ -63,10 +75,7 @@ int main()
 
     IsaEC ec(k, n, maxSize, thread_num);
 
-
-
-
-    long long count, misses, cycles, instructions,instruction_scache;
+    long long count, misses, cycles, instructions, instruction_scache;
     int fd;
     struct perf_event_attr pe;
     pid_t pid;
@@ -75,8 +84,13 @@ int main()
     memset(&pe, 0, sizeof(struct perf_event_attr));
     pe.type = PERF_TYPE_HW_CACHE;
     pe.size = sizeof(struct perf_event_attr);
-    pe.config = PERF_COUNT_HW_CACHE_MISSES; // PERF_COUNT_HW_STALLED_CYCLES_FRONTEND
-    pe.config1 = (0x03 << 16) | (0x00 << 8) | (0x01 << 0); // L3 cache, load operation, cache miss
+    // pe.config = PERF_COUNT_HW_CACHE_MISSES; // PERF_COUNT_HW_STALLED_CYCLES_FRONTEND
+    // pe.config1 = (0x03 << 16) | (0x00 << 8) | (0x01 << 0); // L3 cache, load operation, cache miss
+    // set pe.config count the L3 cache misses
+    pe.config = (PERF_COUNT_HW_CACHE_LL) |
+                (PERF_COUNT_HW_CACHE_OP_READ << 8) |
+                (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
+
     pe.disabled = 1;
     pe.exclude_kernel = 1;
     pe.exclude_hv = 1;
@@ -102,8 +116,6 @@ int main()
     read(fd, &misses, sizeof(long long));
     printf("L3 cache misses: %lld\n", misses);
     close(fd);
-
-
 
     // 开始统计cpu-cycles
     memset(&pe, 0, sizeof(struct perf_event_attr));
@@ -203,13 +215,13 @@ int main()
     // struct perf_event_attr pe;
     // long long count;
     // int fd;
-
     memset(&pe, 0, sizeof(struct perf_event_attr));
     pe.type = PERF_TYPE_HW_CACHE;
     pe.size = sizeof(struct perf_event_attr);
     pe.config = (PERF_COUNT_HW_CACHE_L1I) | 
                 (PERF_COUNT_HW_CACHE_OP_READ << 8) |
                 (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
+    // pe.config = PERF_COUNT_HW_CACHE_L1D;
     pe.disabled = 1;
     pe.exclude_kernel = 1;
     pe.exclude_hv = 1;
@@ -236,6 +248,41 @@ int main()
     read(fd, &instruction_scache, sizeof(long long));
     printf("instruction cache misses: %lld\n", instruction_scache);
     close(fd);
+
+
+    // 开始统计L1D cache misses
+    long long L1D_cache_misses;
+    memset(&pe, 0, sizeof(struct perf_event_attr));
+    pe.type = PERF_TYPE_HW_CACHE;
+    pe.size = sizeof(struct perf_event_attr);
+    // pe.config = PERF_COUNT_HW_CACHE_L1D;
+    pe.config = (PERF_COUNT_HW_CACHE_L1D) |
+                (PERF_COUNT_HW_CACHE_OP_READ << 8) |
+                (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
+    pe.disabled = 1;
+    pe.exclude_kernel = 1;
+    pe.exclude_hv = 1;
+
+    fd = perf_event_open(&pe, 0, -1, -1, 0);
+    if (fd == -1) {
+       fprintf(stderr, "Error L1 data cache misses %llx\n", pe.config);
+       exit(EXIT_FAILURE);
+    }
+    ioctl(fd, PERF_EVENT_IOC_RESET, 0);
+    ioctl(fd, PERF_EVENT_IOC_ENABLE, 0);
+    for (int i = 0; i < 5; ++i)
+    {
+        start = chrono::high_resolution_clock::now();
+        ec.encode_ptr(in, out, size);
+        _end = chrono::high_resolution_clock::now();
+        chrono::duration<double> _duration = _end - start;
+        printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
+    }
+    ioctl(fd, PERF_EVENT_IOC_DISABLE, 0);
+    read(fd, &L1D_cache_misses, sizeof(long long));
+    printf("L1 data cache misses: %lld\n", L1D_cache_misses);
+    close(fd);
+    
 
     return 0;
 }

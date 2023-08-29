@@ -23,3 +23,31 @@ ec.encode(in, out, size);
 
 ec.decode(matrix, err_num, err_list, size);
 ```
+
+## Perf测试
+
+using_stat_all.cpp测试数据条优先的硬件事件结果，using_stat_all_stripe.cpp测试编码条带优先的硬件事件结果。使用C语言直接条用perf库测试指定硬件事件结果主要通过config实现。
+
+1. 测试L3 cache miss的结果
+
+```C
+pe.config = (PERF_COUNT_HW_CACHE_LL) |
+            (PERF_COUNT_HW_CACHE_OP_READ << 8) |
+            (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
+```
+
+2. 测试L1 instruction cache miss结果
+
+```C
+pe.config = (PERF_COUNT_HW_CACHE_L1I) | 
+            (PERF_COUNT_HW_CACHE_OP_READ << 8) |
+            (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
+```
+
+3. 测试L1 data cache miss结果
+
+```C
+pe.config = (PERF_COUNT_HW_CACHE_L1D) |
+            (PERF_COUNT_HW_CACHE_OP_READ << 8) |
+            (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
+```
