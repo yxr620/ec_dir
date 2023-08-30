@@ -172,23 +172,23 @@ int main(int argc, char *argv[])
 
 
 	// Start decode test
-	// check = ec_decode_perf(m, k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs,
-	// 		       temp_buffs, &start);
+	check = ec_decode_perf(m, k, a, g_tbls, buffs, src_in_err, src_err_list, nerrs,
+			       temp_buffs, &start);
 
-	// if (check == BAD_MATRIX) {
-	// 	printf("BAD MATRIX\n");
-	// 	return check;
-	// }
+	if (check == BAD_MATRIX) {
+		printf("BAD MATRIX\n");
+		return check;
+	}
 
-	// for (i = 0; i < nerrs; i++) {
-	// 	if (0 != memcmp(temp_buffs[i], buffs[src_err_list[i]], TEST_LEN(m))) {
-	// 		printf("Fail error recovery (%d, %d, %d) - ", m, k, nerrs);
-	// 		return -1;
-	// 	}
-	// }
+	for (i = 0; i < nerrs; i++) {
+		if (0 != memcmp(temp_buffs[i], buffs[src_err_list[i]], TEST_LEN(m))) {
+			printf("Fail error recovery (%d, %d, %d) - ", m, k, nerrs);
+			return -1;
+		}
+	}
 
-	// printf("erasure_code_decode" TEST_TYPE_STR ": ");
-	// perf_print(start, (long long)(TEST_LEN(m)) * (k + nerrs));
+	printf("erasure_code_decode" TEST_TYPE_STR ": ");
+	perf_print(start, (long long)(TEST_LEN(m)) * (k + nerrs));
 
 	printf("done all: Pass\n");
 	return 0;

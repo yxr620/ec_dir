@@ -31,9 +31,9 @@ void print_ptr(u8 **matrix, int line, int col)
 
 int main()
 {
-    int k = 160, n = 4; // n：数据条带数量 k：校验条带数量
+    int k = 10, n = 4; // n：数据条带数量 k：校验条带数量
     size_t len = 1024 * 1024 * 32; // len：条带长度
-    size_t maxSize = 1024 * 64; // chunk size
+    size_t maxSize = 1024 * 4; // chunk size
     size_t size = k * maxSize;
     int thread_num = 1;
     u8 ***in, ***incopy; // in：测试输入 out：ec输出
@@ -65,8 +65,6 @@ The memory follows the following pattern
         }
     }
 
-
-
     // tmp_in = (u8 *)calloc(len * (k + n), sizeof(u8));
     // in = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
     // incopy = (u8 ***)calloc(len / maxSize, sizeof(u8 **));
@@ -94,9 +92,9 @@ The memory follows the following pattern
     for (int i = 0; i < len / maxSize; ++i)
     {
         for(int j = 0; j < k + n; ++j)
-            memset(in[i][j], rand(), maxSize);
-            // for(int x = 0; x < maxSize; ++x)
-            //     in[i][j][x] = rand();
+            // memset(in[i][j], rand(), maxSize);
+            for(int x = 0; x < maxSize; ++x)
+                in[i][j][x] = rand();
     }
 
     // exit(0);

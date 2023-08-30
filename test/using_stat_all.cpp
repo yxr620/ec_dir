@@ -26,7 +26,7 @@ static long perf_event_open(struct perf_event_attr *hw_event, pid_t pid,
 
 int main()
 {
-    int k = 160, n = 4; // n：数据条带数量 k：校验条带数量
+    int k = 10, n = 4; // n：数据条带数量 k：校验条带数量
     size_t maxSize = 1024 * 4; // 4k chunk size
     size_t len = 1024 * 1024 * 32; 
     size_t size = k * len;
@@ -40,28 +40,29 @@ int main()
     out = (u8 **)calloc(n, sizeof(u8*));
 
     // seperate memory malloc
-    // for (int i = 0; i < k; i++)
-    // {
-    //     posix_memalign((void **)&tmp, 64, len * sizeof(u8));
-    //     in[i] = tmp;
-    // }
-    // for (int i = 0; i < n; i++)
-    // {
-    //     posix_memalign((void **)&tmp, 64, len * sizeof(u8));
-    //     out[i] = tmp;
-    // }
-
-    // continus memory malloc
-    posix_memalign((void **)&tmp_in, 64, k * len * sizeof(u8));
-    posix_memalign((void **)&tmp_out, 64, n * len * sizeof(u8));
     for (int i = 0; i < k; i++)
     {
-        in[i] = tmp_in + i * len;
+        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
+        in[i] = tmp;
     }
     for (int i = 0; i < n; i++)
     {
-        out[i] = tmp_out + i * len;
+        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
+        out[i] = tmp;
     }
+
+    // continus memory malloc
+    // posix_memalign((void **)&tmp_in, 64, k * len * sizeof(u8));
+    // posix_memalign((void **)&tmp_out, 64, n * len * sizeof(u8));
+    // for (int i = 0; i < k; i++)
+    // {
+    //     in[i] = tmp_in + i * len;
+    // }
+    // for (int i = 0; i < n; i++)
+    // {
+    //     out[i] = tmp_out + i * len;
+    // }
+
 
     for (int i = 0; i < k; i++)
     {
