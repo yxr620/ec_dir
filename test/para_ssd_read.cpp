@@ -51,7 +51,7 @@ int main()
 {
     int k = 8, n = 2; //k: data strip, n: parity strip
     size_t maxSize = 4 * 1024; // chunk size
-    size_t len = (size_t)1024 * 1024 * 1024; // total length for each strip
+    size_t len = (size_t)1024 * 1024 * 128; // total length for each strip
     size_t parallel_size = MB; // parallel write to ssd size
     int thread_num = 16; // thread number for encoding and decoding
     int seed = 19;
@@ -65,7 +65,7 @@ int main()
     u8 *tmp;
     srand(seed);
 
-    cout << "------------------------ 随机初始化原数据中 ------------------------" << endl;
+    cout << "------------------------ INITIALIZE DATA ------------------------" << endl;
     in = (u8 **)calloc(k, sizeof(u8*));
     out = (u8 **)calloc(n, sizeof(u8*));
 
@@ -83,9 +83,9 @@ int main()
 
     for (int i = 0; i < k; i++)
     {
-        // memset(in[i], rand(), len);
-        for (size_t j = 0; j < len; j++)
-            in[i][j] = rand() % 255;
+        memset(in[i], rand(), len);
+        // for (size_t j = 0; j < len; j++)
+        //     in[i][j] = rand() % 255;
     }
     for (int i = 0; i < n; ++i)
         memset(out[i], 0, len);
@@ -212,7 +212,7 @@ int main()
     matrix = (u8 **)calloc((k + n), sizeof(u8 *));
     for (int i = 0; i < (k + n); ++i)
     {
-        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
+        posix_memalign((void **)&tmp, 4 * 1024, len * sizeof(u8));
         matrix[i] = tmp;
         if (i < k)
             memcpy(matrix[i], in[i], len);
@@ -235,7 +235,37 @@ int main()
     }
 
     cout << "------------------------ DECODE ------------------------" << endl;
+    // parallel read
     start = chrono::high_resolution_clock::now();
+    parallel_read_ssd(matrix, len, 0, k, n);
+    // for (int i = 0; i < (k + n); ++i)
+    // {
+    //     if (i < k)
+    //     {
+    //         if (memcmp(in[i], matrix[i], len))
+    //         {
+    //             printf("read error %d\n", i);
+    //             return -1;
+    //         }
+    //         else
+    //         {
+    //             printf("check stripe: %d EQUAL\n", i);
+    //         }
+    //     }
+    //     else
+    //     {
+    //         if (memcmp(out[i - k], matrix[i], len))
+    //         {
+    //             printf("read error %d\n", i);
+    //             return -1;
+    //         }
+    //         else
+    //         {
+    //             printf("check stripe: %d EQUAL\n", i);
+    //         }
+    //     }
+    // }
+
     ec.decode_ptr(matrix, err_num, err_list, len);
     _end = chrono::high_resolution_clock::now();
 
