@@ -147,3 +147,4 @@ u8 ***scheduler_stripe_first(int k, int n, int total_size, u8 *data);
 
 
 bool write_ssd(u8 *data, size_t size, size_t offset, char *ssd_name);
+bool parallel_write_ssd(u8 **in, u8 **out, size_t size, size_t offset, int k, int n);

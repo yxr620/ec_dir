@@ -72,13 +72,15 @@ int main()
 
     cout << "------------------------ ENCODE ------------------------" << endl;
     IsaEC ec(k, n, maxSize, thread_num);
+    int encode_offset = 0;
 
-
+    // parallel encode and write to ssd
+    
 
     for (int i = 0; i < 5; ++i)
     {
         start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, total_size);
+        ec.encode_ptr(in, out, len);
         _end = chrono::high_resolution_clock::now();
         chrono::duration<double> _duration = _end - start;
         printf("Time: %f, total data: %ld MB, speed %lf MB/s \n", _duration.count(), (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
@@ -86,28 +88,7 @@ int main()
 
     // write to ssd
     start = chrono::high_resolution_clock::now();
-    # pragma omp parallel for num_threads(4)
-    for (int i = 0; i < k + n; ++i)
-    {
-        if (i < k / 2)
-        {
-            char *ssd_name = ssd1;
-            size_t offset = i * len;
-            write_ssd(in[i], len, offset, ssd_name);
-        }
-        else if (i < k)
-        {
-            char *ssd_name = ssd2;
-            size_t offset = (i - k / 2) * len;
-            write_ssd(in[i], len, offset, ssd_name);
-        }
-        else
-        {
-            char *ssd_name = ssd3;
-            size_t offset = (i - k) * len;
-            write_ssd(out[i - k], len, offset, ssd_name);
-        }
-    }
+    parallel_write_ssd(in, out, len, 0, k, n);
     _end = chrono::high_resolution_clock::now();
     chrono::duration<double> _duration = _end - start;
     printf("Time: %f, total data: %ld MB, speed %lf MB/s \n", _duration.count(), (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());

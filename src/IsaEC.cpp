@@ -93,18 +93,23 @@ void IsaEC::func()
     }
 }
 
+/*
+size: size of every strip
+*/
 bool IsaEC::encode_ptr(u8 **in, u8 **out, size_t size)
 {
     size_t index = 0;
     int len = maxSize;
-    int total_len = size / k;
+    size_t total_len = size;
 
     //change to for loop
     int iter_num = total_len / maxSize;
+    // printf("iter num: %d\n", iter_num);
 
     # pragma omp parallel for schedule(dynamic) num_threads(thread_num)
     for (int i = 0; i < iter_num; ++i)
     {
+        // printf("i : %d\n", i);
         u8 *frag_ptrs[m];
         for (int j = 0; j < m; j++)
         {
@@ -162,7 +167,8 @@ bool IsaEC::decode_ptr(u8 **matrix, int err_num, u8 *err_list, size_t size)
                                 err_list, err_num, k, m);
     ec_init_tables(k, err_num, decode_matrix, g_tbls);
 
-    int total_len = size / k;
+    size_t total_len = size;
+    int iter_num = total_len / maxSize;
     //change to for loop
     #pragma omp parallel for num_threads(thread_num)
     for(size_t index = 0; index < total_len; index += maxSize)
@@ -237,16 +243,54 @@ bool write_ssd(u8 *data, size_t size, size_t offset, char *ssd_name)
     {
 
         perror("pwrite error");
-        printf("%p %ld %ld\n", data, size, offset);
-        printf("%d\n", fd);
+        printf("%d %p %ld %ld\n", fd, data, size, offset);
         close(fd);
         return false;
     }
-
+    printf("%d %p %ld %ld\n", fd, data, size, offset);
     close(fd);
     return true;
 }
 
+/*
+parallel write to ssd
+size: write size
+offset: write offset in every strip
+
+split one ssd to several parts.
+For pcie5.0 split ssd to 4 parts, each starts at 0, 10G, 20G, 30G. 
+For pcie4.0 split ssd to 2 parts, each starts at 0, 10G.
+*/
+bool parallel_write_ssd(u8 **in, u8 **out, size_t size, size_t offset, int k, int n)
+{
+    char *ssd1 = "/dev/nvme1n1"; // pcie5
+    char *ssd2 = "/dev/nvme2n1"; // pcie5
+    char *ssd3 = "/dev/nvme3n1"; // pcie4
+
+    size_t strip_offset = (unsigned long)1024 * 1024 * 1024 * 10;
+    printf("strip offset %lu\n", strip_offset);
+    # pragma omp parallel for num_threads(10)
+    for (int i = 0; i < k + n; ++i)
+    {
+        if (i < k / 2)
+        {
+            size_t in_offset = i * strip_offset + offset;
+            write_ssd(in[i], size, in_offset, ssd1);
+        }
+        else if (i < k)
+        {
+            size_t in_offset = (i - k / 2) * strip_offset + offset;
+            write_ssd(in[i], size, in_offset, ssd2);
+        }
+        else
+        {
+            size_t in_offset = (i - k) * strip_offset + offset;
+            write_ssd(out[i - k], size, in_offset, ssd3);
+        }
+    }
+
+    return true;
+}
 
 /*
 TODO
