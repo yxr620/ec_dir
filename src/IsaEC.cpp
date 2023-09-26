@@ -247,7 +247,7 @@ bool write_ssd(u8 *data, size_t size, size_t offset, char *ssd_name)
         close(fd);
         return false;
     }
-    printf("%d %p %ld %ld\n", fd, data, size, offset);
+    // printf("%d %p %ld %ld\n", fd, data, size, offset);
     close(fd);
     return true;
 }
@@ -268,8 +268,7 @@ bool parallel_write_ssd(u8 **in, u8 **out, size_t size, size_t offset, int k, in
     char *ssd3 = "/dev/nvme3n1"; // pcie4
 
     size_t strip_offset = (unsigned long)1024 * 1024 * 1024 * 10;
-    printf("strip offset %lu\n", strip_offset);
-    # pragma omp parallel for num_threads(10)
+    # pragma omp parallel for num_threads(32)
     for (int i = 0; i < k + n; ++i)
     {
         if (i < k / 2)
@@ -289,6 +288,30 @@ bool parallel_write_ssd(u8 **in, u8 **out, size_t size, size_t offset, int k, in
         }
     }
 
+    return true;
+}
+
+/*
+read data from ssd to u8 *data
+*/
+bool read_ssd(u8 *data, size_t size, size_t offset, char *ssd_name)
+{
+    int fd = open(ssd_name, O_RDWR | O_DIRECT);
+    if (fd < 0)
+    {
+        printf("open ssd error\n");
+        return false;
+    }
+
+    if (pread(fd, (char *)data, size, offset) < 0)
+    {
+        perror("pread error");
+        printf("%d %p %ld %ld\n", fd, data, size, offset);
+        close(fd);
+        return false;
+    }
+    printf("%d %p %ld %ld\n", fd, data, size, offset);
+    close(fd);
     return true;
 }
 
