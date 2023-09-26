@@ -6,6 +6,7 @@
 #include <limits.h>
 #include <pthread.h>
 #include "erasure_code.h"
+#include <omp.h>
 
 using namespace std;
 
@@ -39,6 +40,7 @@ public:
     bool decode_ptr(u8 **matrix, int err_num, u8 *err_list, size_t size);
     bool cache_g_tbls(int err_num, u8 *err_list);
     bool cache_decode_ptr(u8 **matrix, int err_num, u8 *err_list, size_t size);
+    void func();
     int getMinSize();
 
     /*
@@ -142,3 +144,6 @@ class scheduler
 };
 
 u8 ***scheduler_stripe_first(int k, int n, int total_size, u8 *data);
+
+
+bool write_ssd(u8 *data, size_t size, size_t offset, char *ssd_name);

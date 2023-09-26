@@ -3,6 +3,10 @@
 #include <omp.h>
 #include <bitset>
 #include <iostream>
+#include <unistd.h>   // 提供 lseek 函数的声明
+#include <fcntl.h>    // 提供 O_RDWR 和 O_DIRECT 宏的定义
+#include <stdio.h>    // 提供 printf 函数的声明
+#include <stdbool.h>  // 提供 bool 类型的定义
 
 using namespace std;
 
@@ -39,6 +43,7 @@ IsaEC::IsaEC(int k_, int n_, int maxSize_, int thread_num_/*=4*/) : n(n_), k(k_)
     // for (int i = 0; i < 32; ++i) printf("%d ", tbl[i]);
     // exit(1);
     ec_init_tables(k, m - k, &encode_matrix[k * k], g_tbls);
+    printf("thread num: %d\n", thread_num);
 }
 
 IsaEC::~IsaEC()
@@ -77,27 +82,40 @@ bool IsaEC::encode(vvc_u8 &in, vvc_u8 &out, size_t size)
     return true;
 }
 
+void IsaEC::func()
+{
+    omp_set_num_threads(4);
+    # pragma omp parallel for num_threads(4)
+    for (int i = 0; i < 4; ++i)
+    {
+        int id = omp_get_thread_num();
+        printf("id: %d\n", id);
+    }
+}
+
 bool IsaEC::encode_ptr(u8 **in, u8 **out, size_t size)
 {
     size_t index = 0;
-    u8 *frag_ptrs[m];
     int len = maxSize;
-
     int total_len = size / k;
 
-    #pragma omp parallel for num_threads(thread_num)
-    for(size_t index = 0; index < total_len; index += maxSize)
+    //change to for loop
+    int iter_num = total_len / maxSize;
+
+    # pragma omp parallel for schedule(dynamic) num_threads(thread_num)
+    for (int i = 0; i < iter_num; ++i)
     {
-        // printf("index %ld\n", index);
-        for (int i = 0; i < m; i++)
+        u8 *frag_ptrs[m];
+        for (int j = 0; j < m; j++)
         {
-            if (i < k)
-                frag_ptrs[i] = &in[i][index];
+            if (j < k)
+                frag_ptrs[j] = &in[j][i * maxSize];
             else
-                frag_ptrs[i] = &out[i - k][index];
+                frag_ptrs[j] = &out[j - k][i * maxSize];
         }
         ec_encode_data(len, k, n, g_tbls, frag_ptrs, &frag_ptrs[k]);
     }
+
     return true;
 }
 
@@ -202,6 +220,33 @@ bool IsaEC::cache_decode_ptr(u8 **matrix, int err_num, u8 *err_list, size_t size
 
     return true;
 }
+
+/*
+write data to ssd
+*/
+bool write_ssd(u8 *data, size_t size, size_t offset, char *ssd_name)
+{
+    int fd = open(ssd_name, O_RDWR | O_DIRECT);
+    if (fd < 0)
+    {
+        printf("open ssd error\n");
+        return false;
+    }
+
+    if (pwrite(fd, (char *)data, size, offset) < 0)
+    {
+
+        perror("pwrite error");
+        printf("%p %ld %ld\n", data, size, offset);
+        printf("%d\n", fd);
+        close(fd);
+        return false;
+    }
+
+    close(fd);
+    return true;
+}
+
 
 /*
 TODO

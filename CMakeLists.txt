@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.0)
 
 
 # 项目信息
-project(EC_edr)
+project(erasure)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
@@ -16,10 +16,16 @@ add_dependencies(EC_edr build_isal)
 link_directories( lib/isa-l/bin)
 include_directories( lib/isa-l/include)
 TARGET_LINK_LIBRARIES(EC_edr isal)
-
 target_include_directories(EC_edr PUBLIC src)
 
-# target_compile_options(EC_edr PUBLIC -O3)
+find_package(OpenMP REQUIRED)
+if(OPENMP_FOUND)
+    target_link_libraries(EC_edr OpenMP::OpenMP_CXX)
+endif()
+
+message(${EC_edr_SRCS})
+
+target_compile_options(EC_edr PUBLIC -O3)
 
 AUX_SOURCE_DIRECTORY(./test test_SRCS)
 foreach (FILE_PATH ${test_SRCS})

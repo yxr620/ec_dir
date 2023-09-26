@@ -51,3 +51,36 @@ pe.config = (PERF_COUNT_HW_CACHE_L1D) |
             (PERF_COUNT_HW_CACHE_OP_READ << 8) |
             (PERF_COUNT_HW_CACHE_RESULT_MISS << 16);
 ```
+
+## cmake解释
+
+下面这段代码的唯一作用是定义变量`PROJECT_NAME`
+
+```cmake
+project(erasure)
+```
+
+之后初始化库变量`EC_edr`，即先声明`EC_edr`然后给其赋值为`EC_edr_SRCS`
+
+```cmake
+ADD_LIBRARY(EC_edr ${EC_edr_SRCS})
+```
+
+接下来给创建的库添加依赖等操作：
+```cmake
+ADD_LIBRARY(EC_edr ${EC_edr_SRCS})
+add_dependencies(EC_edr build_isal)
+link_directories( lib/isa-l/bin)
+include_directories( lib/isa-l/include)
+TARGET_LINK_LIBRARIES(EC_edr isal)
+target_include_directories(EC_edr PUBLIC src)
+
+find_package(OpenMP REQUIRED)
+if(OPENMP_FOUND)
+    target_link_libraries(EC_edr OpenMP::OpenMP_CXX)
+endif()
+
+message(${EC_edr_SRCS})
+
+target_compile_options(EC_edr PUBLIC -O3)
+```

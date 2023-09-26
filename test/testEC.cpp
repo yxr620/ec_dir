@@ -33,7 +33,7 @@ void print_ma(vvc_u8 matrix)
 
 int main()
 {
-    int k = 2, n = 1, maxSize = 8; // n：数据条带数量 k：校验条带数量
+    int k = 5, n = 3, maxSize = 8; // n：数据条带数量 k：校验条带数量
     size_t len = 8;                  // len：条带长度 2147483647 357913941
     size_t size = k * len;
     int thread_num = 1;
@@ -60,9 +60,6 @@ int main()
         }
     }
 
-    cout<<"out put the raw data";
-    print_ma(in);
-    print_ma(out);
     
     cout << "------------------------ 开始计算EC ------------------------" << endl;
 
@@ -79,6 +76,10 @@ int main()
     printf("time: %fs \n", _duration.count());
     printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
 
+    cout<<"out put the raw data";
+    print_ma(in);
+    print_ma(out);
+    
     vvc_u8 matrix;
     matrix.insert(matrix.end(), in.begin(), in.end());
     matrix.insert(matrix.end(), out.begin(), out.end());
