@@ -51,7 +51,7 @@ int main()
 {
     int k = 8, n = 2; //k: data strip, n: parity strip
     size_t maxSize = 4 * 1024; // chunk size
-    size_t len = (size_t)1024 * 1024 * 128; // total length for each strip
+    size_t len = (size_t)1024 * 1024 * 1024; // total length for each strip
     size_t parallel_size = MB; // parallel write to ssd size
     int thread_num = 16; // thread number for encoding and decoding
     int seed = 19;
@@ -84,8 +84,8 @@ int main()
     for (int i = 0; i < k; i++)
     {
         memset(in[i], rand(), len);
-        // for (size_t j = 0; j < len; j++)
-        //     in[i][j] = rand() % 255;
+        for (size_t j = 0; j < len / 128; j++)
+            in[i][j] = rand() % 255;
     }
     for (int i = 0; i < n; ++i)
         memset(out[i], 0, len);
@@ -238,33 +238,6 @@ int main()
     // parallel read
     start = chrono::high_resolution_clock::now();
     parallel_read_ssd(matrix, len, 0, k, n);
-    // for (int i = 0; i < (k + n); ++i)
-    // {
-    //     if (i < k)
-    //     {
-    //         if (memcmp(in[i], matrix[i], len))
-    //         {
-    //             printf("read error %d\n", i);
-    //             return -1;
-    //         }
-    //         else
-    //         {
-    //             printf("check stripe: %d EQUAL\n", i);
-    //         }
-    //     }
-    //     else
-    //     {
-    //         if (memcmp(out[i - k], matrix[i], len))
-    //         {
-    //             printf("read error %d\n", i);
-    //             return -1;
-    //         }
-    //         else
-    //         {
-    //             printf("check stripe: %d EQUAL\n", i);
-    //         }
-    //     }
-    // }
 
     ec.decode_ptr(matrix, err_num, err_list, len);
     _end = chrono::high_resolution_clock::now();
