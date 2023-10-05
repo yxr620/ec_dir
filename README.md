@@ -39,7 +39,13 @@ const char *ssd1 = "/dev/nvme1n1"; // pcie5
 const char *ssd2 = "/dev/nvme2n1"; // pcie5
 const char *ssd3 = "/dev/nvme3n1"; // pcie4
 ```
-如果要查询全部SSD的名称可以使用`sudo fdisk -l`
+如果要查询全部SSD的名称可以使用`sudo fdisk -l`。在写入SSD之前可以使用如下指令将特定的SSD格式化，让其回到初始状态。
+
+```bash
+sudo nvme format -f -s 1 /dev/nvme1n1
+sudo nvme format -f -s 1 /dev/nvme2n1
+sudo nvme format -f -s 1 /dev/nvme3n1
+```
 
 上述程序在SSD上编解码的性能时会给出实时显示表示编解码的性能：
 ```
