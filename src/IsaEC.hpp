@@ -146,7 +146,7 @@ class scheduler
 u8 ***scheduler_stripe_first(int k, int n, int total_size, u8 *data);
 
 
-bool write_ssd(u8 *data, size_t size, size_t offset, char *ssd_name);
+bool write_ssd(u8 *data, size_t size, size_t offset, const char *ssd_name);
 bool parallel_write_ssd(u8 **in, u8 **out, size_t size, size_t offset, int k, int n);
-bool read_ssd(u8 *data, size_t size, size_t offset, char *ssd_name);
+bool read_ssd(u8 *data, size_t size, size_t offset, const char *ssd_name);
 bool parallel_read_ssd(u8 **matrix, size_t size, size_t offset, int k, int n);

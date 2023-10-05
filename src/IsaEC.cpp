@@ -230,7 +230,7 @@ bool IsaEC::cache_decode_ptr(u8 **matrix, int err_num, u8 *err_list, size_t size
 /*
 write data to ssd
 */
-bool write_ssd(u8 *data, size_t size, size_t offset, char *ssd_name)
+bool write_ssd(u8 *data, size_t size, size_t offset, const char *ssd_name)
 {
     int fd = open(ssd_name, O_RDWR | O_DIRECT);
     if (fd < 0)
@@ -263,9 +263,9 @@ For pcie4.0 split ssd to 2 parts, each starts at 0, 10G.
 */
 bool parallel_write_ssd(u8 **in, u8 **out, size_t size, size_t offset, int k, int n)
 {
-    char *ssd1 = "/dev/nvme1n1"; // pcie5
-    char *ssd2 = "/dev/nvme2n1"; // pcie5
-    char *ssd3 = "/dev/nvme3n1"; // pcie4
+    const char *ssd1 = "/dev/nvme1n1"; // pcie5
+    const char *ssd2 = "/dev/nvme2n1"; // pcie5
+    const char *ssd3 = "/dev/nvme3n1"; // pcie4
 
     size_t strip_offset = (unsigned long)1024 * 1024 * 1024 * 10;
     # pragma omp parallel for num_threads(32)
@@ -294,7 +294,7 @@ bool parallel_write_ssd(u8 **in, u8 **out, size_t size, size_t offset, int k, in
 /*
 read data from ssd to u8 *data
 */
-bool read_ssd(u8 *data, size_t size, size_t offset, char *ssd_name)
+bool read_ssd(u8 *data, size_t size, size_t offset, const char *ssd_name)
 {
     int fd = open(ssd_name, O_RDWR | O_DIRECT);
     if (fd < 0)
@@ -310,7 +310,7 @@ bool read_ssd(u8 *data, size_t size, size_t offset, char *ssd_name)
         close(fd);
         return false;
     }
-    printf("%d %p %ld %ld\n", fd, data, size, offset);
+    // printf("%d %p %ld %ld\n", fd, data, size, offset);
     close(fd);
     return true;
 }
@@ -318,9 +318,9 @@ bool read_ssd(u8 *data, size_t size, size_t offset, char *ssd_name)
 
 bool parallel_read_ssd(u8 **matrix, size_t size, size_t offset, int k, int n)
 {
-    char *ssd1 = "/dev/nvme1n1"; // pcie5
-    char *ssd2 = "/dev/nvme2n1"; // pcie5
-    char *ssd3 = "/dev/nvme3n1"; // pcie4
+    const char *ssd1 = "/dev/nvme1n1"; // pcie5
+    const char *ssd2 = "/dev/nvme2n1"; // pcie5
+    const char *ssd3 = "/dev/nvme3n1"; // pcie4
 
     size_t strip_offset = (unsigned long)1024 * 1024 * 1024 * 10;
     # pragma omp parallel for num_threads(32)
@@ -423,7 +423,7 @@ u8 **scheduler::strip_first_order(u8 *data)
 
 u8 ***scheduler::stripe_frist_continue(u8 *data)
 {
-    
+    return NULL;
 }
 
 u8 ***scheduler::stripe_first_outinside(u8 *data)

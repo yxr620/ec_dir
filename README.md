@@ -1,28 +1,74 @@
 # EC编译码器
 本项目为对Intel isa-l 库的封装
 
-## 使用方法
+## 编译该项目
 
-项目设置：首先在新Cmake项目中clone本项目，然后将本项目作为子目录添加，最后连接到可执行文件
-```Cmake
-add_subdirectory(EC_edr)
+创建build目录，并且生成编译指令：
 
-add_executable([your_target] [your_source.cpp])
-TARGET_LINK_LIBRARIES([your_target] EC_edr)
+```bash
+mkdir build
+cmake -B build
 ```
 
-代码中使用：包含头文件并使用参数实例化编译码器对象
+进入build目录并且编译项目：
 
-```C
-#include "IsaEC.hpp"
-
-// n = 数据条带数， k = 校验条带数， maxSize = 最大条带长度
-IsaEC ec(n, k, maxSize);
-
-ec.encode(in, out, size);
-
-ec.decode(matrix, err_num, err_list, size);
+```bash
+cd build
+make
 ```
+
+## 测试在SSD上编码的速度
+
+进入build目录后可以直接使用`make run`指令一键编译并且运行test目录下的文件。
+
+使用如下指令可以测试编码写入SSD的速度，已经读出SSD数据解码速度：
+
+```bash
+sudo make run_para_ssd_read
+```
+由于在写入SSD时需要sudo权限，因此在指令之前需要加入sudo指令。具体通过如下参数指定写入具体某个SSD，以及编码格式的相关参数。
+
+```C++
+int k = 8, n = 2; //k: data strip, n: parity strip
+size_t maxSize = 4 * 1024; // chunk size
+size_t len = (size_t)1024 * 1024 * 1024; // total length for each strip
+size_t parallel_size = MB; // parallel write to ssd size
+int thread_num = 16; // thread number for encoding and decoding
+int seed = 10;
+const char *ssd1 = "/dev/nvme1n1"; // pcie5
+const char *ssd2 = "/dev/nvme2n1"; // pcie5
+const char *ssd3 = "/dev/nvme3n1"; // pcie4
+```
+如果要查询全部SSD的名称可以使用`sudo fdisk -l`
+
+上述程序在SSD上编解码的性能时会给出实时显示表示编解码的性能：
+```
+------------------------ INITIALIZE DATA ------------------------
+------------------------ ENCODE ------------------------
+thread num: 16
+Time: 1.386815, total data: 10240 MB, speed 7383.826380 MB/s 
+------------------------ READ SSD ------------------------
+check stripe: 0 EQUAL
+check stripe: 1 EQUAL
+check stripe: 2 EQUAL
+check stripe: 3 EQUAL
+check stripe: 4 EQUAL
+check stripe: 5 EQUAL
+check stripe: 6 EQUAL
+check stripe: 7 EQUAL
+check stripe: 8 EQUAL
+check stripe: 9 EQUAL
+------------------------ ADD ERROR ------------------------
+------------------------ DECODE ------------------------
+finish
+decode time: 0.584768s 
+total data: 10240 MB, speed 17511.226120 MB/s 
+check stripe: 9 EQUAL
+check stripe: 1 EQUAL
+[100%] Built target run_para_ssd_read
+```
+其中ENCODE部分展示了编码过程的速度。后续READ SSD部分检查写入SSD的数据是否能被正确的读出。最后DECODE部分展示了解码部分是否正确，以及解码的速度。
+
 
 ## Perf测试
 

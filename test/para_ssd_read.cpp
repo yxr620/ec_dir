@@ -54,10 +54,10 @@ int main()
     size_t len = (size_t)1024 * 1024 * 1024; // total length for each strip
     size_t parallel_size = MB; // parallel write to ssd size
     int thread_num = 16; // thread number for encoding and decoding
-    int seed = 19;
-    char *ssd1 = "/dev/nvme1n1"; // pcie5
-    char *ssd2 = "/dev/nvme2n1"; // pcie5
-    char *ssd3 = "/dev/nvme3n1"; // pcie4
+    int seed = 1;
+    const char *ssd1 = "/dev/nvme1n1"; // pcie5
+    const char *ssd2 = "/dev/nvme2n1"; // pcie5
+    const char *ssd3 = "/dev/nvme3n1"; // pcie4
 
 
     size_t total_size = k * len;
@@ -84,8 +84,8 @@ int main()
     for (int i = 0; i < k; i++)
     {
         memset(in[i], rand(), len);
-        for (size_t j = 0; j < len / 128; j++)
-            in[i][j] = rand() % 255;
+        // for (size_t j = 0; j < len / 128; j++)
+        //     in[i][j] = rand() % 255;
     }
     for (int i = 0; i < n; ++i)
         memset(out[i], 0, len);
@@ -105,8 +105,7 @@ int main()
     {
         #pragma omp section
         {
-            int id = omp_get_thread_num();
-            printf("thread %d\n", id);
+            // printf("thread %d\n", omp_get_thread_num());
             while(encode_offset < len) 
             {
                 u8 **in_offset = (u8 **)calloc(k, sizeof(u8*));

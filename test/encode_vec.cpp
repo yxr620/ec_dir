@@ -1,3 +1,8 @@
+/*
+Using vector to store encode data and decode data
+Using function encode and decode
+*/
+
 #include "IsaEC.hpp"
 #include <iostream>
 #include <chrono>
