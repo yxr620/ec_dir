@@ -10,6 +10,8 @@
 
 using namespace std;
 
+#define GB ((size_t)1024 * 1024 * 1024)
+#define MB ((size_t)1024 * 1024)
 typedef unsigned char u8;
 typedef vector<vector<u8> > vvc_u8;
 

@@ -268,7 +268,7 @@ bool parallel_write_ssd(u8 **in, u8 **out, size_t size, size_t offset, int k, in
     const char *ssd3 = "/dev/nvme3n1"; // pcie4
 
     size_t strip_offset = (unsigned long)1024 * 1024 * 1024 * 10;
-    # pragma omp parallel for num_threads(32)
+    # pragma omp parallel for num_threads(k + n)
     for (int i = 0; i < k + n; ++i)
     {
         if (i < k / 2)

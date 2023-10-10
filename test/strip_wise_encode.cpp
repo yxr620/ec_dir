@@ -21,6 +21,7 @@ Check multithread correctness, openmp checked.
 
 using namespace std;
 
+
 chrono::time_point<std::chrono::high_resolution_clock> start, _end;
 
 void func()
@@ -60,13 +61,15 @@ int main()
 {
     int k = 8, n = 2; //k: data strip, n: parity strip
     size_t maxSize = 4 * 1024; // chunk size
-    size_t len = (size_t)1024 * 1024 * 1024 * 2; // total length for each strip
+    size_t len = (size_t)1024 * 1024 * 1024 * 1; // total length for each strip
     int thread_num = 8;
     u8 **in, **out; // in：data strip out: parity strip
     u8 *tmp_in, *tmp_out, *tmp;
     int seed = 2;
     srand(seed);
-    cout << "------------------------ 随机初始化原数据中 ------------------------" << endl;
+    cout << "------------------------ INITIALIZE DATA ------------------------" << endl;
+    cout<<"Encode strip: "<<k<<" Check sum strip: "<<n<<endl;
+    cout<<"Total data: "<<(k + n) * len / GB<<"GB"<<endl;
     in = (u8 **)calloc(k, sizeof(u8*));
     out = (u8 **)calloc(n, sizeof(u8*));
 
@@ -109,14 +112,12 @@ int main()
     cout << "------------------------ ENCODE ------------------------" << endl;
     IsaEC ec(k, n, maxSize, thread_num);
 
-    for (int i = 0; i < 5; ++i)
-    {
-        start = chrono::high_resolution_clock::now();
-        ec.encode_ptr(in, out, len);
-        _end = chrono::high_resolution_clock::now();
-        chrono::duration<double> _duration = _end - start;
-        printf("total data: %ld MB, speed %lf MB/s \n", (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
-    }
+    start = chrono::high_resolution_clock::now();
+    ec.encode_ptr(in, out, len);
+    _end = chrono::high_resolution_clock::now();
+    chrono::duration<double> _duration = _end - start;
+    printf("Encode time: %f s, speed %lf GB/s \n", _duration.count(), (n + k) * len / GB / _duration.count());
+
 
     // print_ptr(in, k, len);
     // print_ptr(out, n, len);
@@ -154,9 +155,9 @@ int main()
     ec.decode_ptr(matrix, err_num, err_list, len);
     _end = chrono::high_resolution_clock::now();
 
-    chrono::duration<double> _duration = _end - start;
+    _duration = _end - start;
     printf("decode time: %fs \n", _duration.count());
-    printf("total data: %ld MB, speed %lf MB/s \n", (n + k) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
+    printf("total data: %ld GB, speed %lf GB/s \n", (n + k) * len / GB, (n + k) * len / GB / _duration.count());
 
     // print_ptr(matrix, k + n, len);
     // check the decode result
