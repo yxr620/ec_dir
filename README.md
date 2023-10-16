@@ -16,6 +16,22 @@ cmake -B build
 cd build
 make
 ```
+## 测试RS内存编码速度
+
+使用如下指令对RS在内存中进行编解码测试：
+```bash
+sudo make run_strip_wise_encdoe
+```
+
+设置RS编码参数如下：
+
+```bash
+int k = 8, m = 2; //k: data strip, m: parity strip
+size_t maxSize = 4 * 1024; // chunk size
+size_t len = (size_t)1024 * 1024 * 1024 * 1; // total length for each strip
+int thread_num = 8;
+```
+
 
 ## 测试在SSD上编码的速度
 
@@ -39,6 +55,8 @@ const char *ssd1 = "/dev/nvme1n1"; // pcie5
 const char *ssd2 = "/dev/nvme2n1"; // pcie5
 const char *ssd3 = "/dev/nvme3n1"; // pcie4
 ```
+上述参数中，`k`表示数据块个数，`m`代表校验块个数。
+
 如果要查询全部SSD的名称可以使用`sudo fdisk -l`。在写入SSD之前可以使用如下指令将特定的SSD格式化，让其回到初始状态。
 
 ```bash

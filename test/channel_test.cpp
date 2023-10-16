@@ -52,7 +52,7 @@ int main()
     size_t len = (size_t)1024 * 1024 * 1024; // total length for each strip
     size_t parallel_size = 4 * MB; // parallel write to ssd size
     int thread_num = 16; // thread number for encoding and decoding
-    int seed = 1;
+    int seed = time(NULL);
     const char *ssd1 = "/dev/nvme1n1"; // pcie5
     const char *ssd2 = "/dev/nvme2n1"; // pcie5
     const char *ssd3 = "/dev/nvme3n1"; // pcie4
@@ -70,12 +70,12 @@ int main()
     // seperate memory malloc
     for (int i = 0; i < k; i++)
     {
-        posix_memalign((void **)&tmp, 4 * 1024, len * sizeof(u8));
+        int dump = posix_memalign((void **)&tmp, 4 * 1024, len * sizeof(u8));
         in[i] = tmp;
     }
     for (int i = 0; i < n; i++)
     {
-        posix_memalign((void **)&tmp, 4 * 1024, len * sizeof(u8));
+        int dump = posix_memalign((void **)&tmp, 4 * 1024, len * sizeof(u8));
         out[i] = tmp;
     }
 
@@ -90,7 +90,7 @@ int main()
 
 
     cout << "------------------------ WRITE SSD ------------------------" << endl;
-    IsaEC ec(k, n, maxSize, thread_num);
+    // IsaEC ec(k, n, maxSize, thread_num);
     size_t encode_offset = 0;
     size_t write_offset = 0;
     size_t iter_len = parallel_size;
@@ -104,13 +104,13 @@ int main()
 
     _end = chrono::high_resolution_clock::now();
     chrono::duration<double> _duration = _end - start;
-    printf("Time: %f, total data: %ld MB, speed %lf MB/s \n", _duration.count(), (k + n) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
+    printf("Time: %f, total data: %ld GB, speed %lf Gbps \n", _duration.count(), (k + n) * len / GB, (n + k) * len / GB * 8 / _duration.count());
 
     cout << "------------------------ READ SSD ------------------------" << endl;
     u8 **read_matrix = (u8 **)calloc((k + n), sizeof(u8 *));
     for (int i = 0; i < (k + n); ++i)
     {
-        posix_memalign((void **)&tmp, 4 * 1024, len * sizeof(u8));
+        int dump = posix_memalign((void **)&tmp, 4 * 1024, len * sizeof(u8));
         read_matrix[i] = tmp;
     }
 
@@ -119,7 +119,7 @@ int main()
     _end = chrono::high_resolution_clock::now();
     _duration = _end - start;
     printf("decode time: %fs \n", _duration.count());
-    printf("total data: %ld MB, speed %lf MB/s \n", (n + k) * len / 1024 / 1024, (n + k) * len / 1024 / 1024 / _duration.count());
+    printf("total data: %ld GB, speed %lf Gbps \n", (n + k) * len / GB, (n + k) * len / GB * 8 / _duration.count());
 
     // print_ptr(in, k, 1024);
     // print_ptr(read_matrix, k + n, 1024);

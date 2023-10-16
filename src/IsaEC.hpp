@@ -42,7 +42,6 @@ public:
     bool decode_ptr(u8 **matrix, int err_num, u8 *err_list, size_t size);
     bool cache_g_tbls(int err_num, u8 *err_list);
     bool cache_decode_ptr(u8 **matrix, int err_num, u8 *err_list, size_t size);
-    void func();
     int getMinSize();
 
     /*

@@ -59,40 +59,40 @@ void print_ptr(u8 **matrix, int line, int col)
 
 int main()
 {
-    int k = 8, n = 2; //k: data strip, n: parity strip
+    int k = 160, m = 4; //k: data strip, m: parity strip
     size_t maxSize = 4 * 1024; // chunk size
-    size_t len = (size_t)1024 * 1024 * 1024 * 1; // total length for each strip
-    int thread_num = 8;
+    size_t len = (size_t)1024 * 1024 * 512; // total length for each strip
+    int thread_num = 16;
     u8 **in, **out; // in：data strip out: parity strip
     u8 *tmp_in, *tmp_out, *tmp;
     int seed = 2;
     srand(seed);
     cout << "------------------------ INITIALIZE DATA ------------------------" << endl;
-    cout<<"Encode strip: "<<k<<" Check sum strip: "<<n<<endl;
-    cout<<"Total data: "<<(k + n) * len / GB<<"GB"<<endl;
+    cout<<"Encode strip: "<<k<<" Check sum strip: "<<m<<endl;
+    cout<<"Total data: "<<(k + m) * len / GB<<"GB"<<endl;
     in = (u8 **)calloc(k, sizeof(u8*));
-    out = (u8 **)calloc(n, sizeof(u8*));
+    out = (u8 **)calloc(m, sizeof(u8*));
 
     // seperate memory malloc
     for (int i = 0; i < k; i++)
     {
-        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
+        int dump = posix_memalign((void **)&tmp, 64, len * sizeof(u8));
         in[i] = tmp;
     }
-    for (int i = 0; i < n; i++)
+    for (int i = 0; i < m; i++)
     {
-        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
+        int dump = posix_memalign((void **)&tmp, 64, len * sizeof(u8));
         out[i] = tmp;
     }
 
     // continus memory malloc
     // posix_memalign((void **)&tmp_in, 64, k * len * sizeof(u8));
-    // posix_memalign((void **)&tmp_out, 64, n * len * sizeof(u8));
+    // posix_memalign((void **)&tmp_out, 64, m * len * sizeof(u8));
     // for (int i = 0; i < k; i++)
     // {
     //     in[i] = tmp_in + i * len;
     // }
-    // for (int i = 0; i < n; i++)
+    // for (int i = 0; i < m; i++)
     // {
     //     out[i] = tmp_out + i * len;
     // }
@@ -104,29 +104,30 @@ int main()
         // for (size_t j = 0; j < len; j++)
         //     in[i][j] = rand() % 255;
     }
-    for (int i = 0; i < n; ++i)
+    for (int i = 0; i < m; ++i)
+    {
         memset(out[i], 0, len);
         // for (size_t j = 0; j < len; ++j) out[i][j] = 0;
-
+    }
 
     cout << "------------------------ ENCODE ------------------------" << endl;
-    IsaEC ec(k, n, maxSize, thread_num);
+    IsaEC ec(k, m, maxSize, thread_num);
 
     start = chrono::high_resolution_clock::now();
     ec.encode_ptr(in, out, len);
     _end = chrono::high_resolution_clock::now();
     chrono::duration<double> _duration = _end - start;
-    printf("Encode time: %f s, speed %lf GB/s \n", _duration.count(), (n + k) * len / GB / _duration.count());
+    printf("Encode time: %f s, speed %lf Gbps\n", _duration.count(), (m + k) * len / GB / _duration.count() * 8);
 
 
     // print_ptr(in, k, len);
-    // print_ptr(out, n, len);
+    // print_ptr(out, m, len);
     cout << "------------------------ ADD ERROR ------------------------" << endl;
     u8 **matrix;
-    matrix = (u8 **)calloc((k + n), sizeof(u8 *));
-    for (int i = 0; i < (k + n); ++i)
+    matrix = (u8 **)calloc((k + m), sizeof(u8 *));
+    for (int i = 0; i < (k + m); ++i)
     {
-        posix_memalign((void **)&tmp, 64, len * sizeof(u8));
+        int dump = posix_memalign((void **)&tmp, 64, len * sizeof(u8));
         matrix[i] = tmp;
         if (i < k)
             memcpy(matrix[i], in[i], len);
@@ -134,11 +135,11 @@ int main()
             memcpy(matrix[i], out[i - k], len);
     }
 
-    int err_num = n;
+    int err_num = m;
     unsigned char err_list[err_num];
     for(int i = 0; i < err_num; ++i)
     {
-        err_list[i] = rand() % (k + n);
+        err_list[i] = rand() % (k + m);
     }
     for (auto i : err_list)
     {
@@ -148,7 +149,7 @@ int main()
         }
     }
 
-    // print_ptr(matrix, k + n, len);
+    // print_ptr(matrix, k + m, len);
 
     cout << "------------------------ DECODE ------------------------" << endl;
     start = chrono::high_resolution_clock::now();
@@ -157,9 +158,9 @@ int main()
 
     _duration = _end - start;
     printf("decode time: %fs \n", _duration.count());
-    printf("total data: %ld GB, speed %lf GB/s \n", (n + k) * len / GB, (n + k) * len / GB / _duration.count());
+    printf("total data: %ld GB, speed %lf Gbps \n", (m + k) * len / GB, (m + k) * len / GB / _duration.count() * 8);
 
-    // print_ptr(matrix, k + n, len);
+    // print_ptr(matrix, k + m, len);
     // check the decode result
     for (auto i: err_list)
     {

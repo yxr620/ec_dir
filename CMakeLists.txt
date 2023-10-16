@@ -7,6 +7,8 @@ project(erasure)
 set(CMAKE_CXX_STANDARD 14)
 set(CMAKE_CXX_STANDARD_REQUIRED True)
 
+# set(CMAKE_BUILD_TYPE Debug)
+
 add_subdirectory(lib)
 
 aux_source_directory(./src EC_edr_SRCS)

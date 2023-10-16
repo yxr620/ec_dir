@@ -43,7 +43,6 @@ IsaEC::IsaEC(int k_, int n_, int maxSize_, int thread_num_/*=4*/) : n(n_), k(k_)
     // for (int i = 0; i < 32; ++i) printf("%d ", tbl[i]);
     // exit(1);
     ec_init_tables(k, m - k, &encode_matrix[k * k], g_tbls);
-    printf("thread num: %d\n", thread_num);
 }
 
 IsaEC::~IsaEC()
@@ -82,16 +81,6 @@ bool IsaEC::encode(vvc_u8 &in, vvc_u8 &out, size_t size)
     return true;
 }
 
-void IsaEC::func()
-{
-    omp_set_num_threads(4);
-    # pragma omp parallel for num_threads(4)
-    for (int i = 0; i < 4; ++i)
-    {
-        int id = omp_get_thread_num();
-        printf("id: %d\n", id);
-    }
-}
 
 /*
 size: size of every strip
@@ -342,7 +331,6 @@ bool parallel_read_ssd(u8 **matrix, size_t size, size_t offset, int k, int n)
             read_ssd(matrix[i], size, in_offset, ssd3);
         }
     }
-    printf("finish\n");
     return true;
 }
 
@@ -458,5 +446,5 @@ TODO
 */
 u8 ***scheduler::stripe_first_dynamic(u8 *data)
 {
-
+    return NULL;
 }
