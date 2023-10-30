@@ -50,9 +50,9 @@ int main()
 {
     int k = 8, m = 2; //k: data strip, m: parity strip
     size_t maxSize = 16 * 1024; // chunk size
-    size_t len = (size_t)1024 * 1024 * 1024 * 2; // total length for each strip
-    size_t parallel_size = 8 * MB; // parallel write to ssd size
-    int thread_num = 2; // thread number for encoding and decoding
+    size_t len = (size_t)1024 * 1024 * 1024; // total length for each strip
+    size_t parallel_size = 4 * MB; // parallel write to ssd size
+    int thread_num = 16; // thread number for encoding and decoding
     int seed = time(NULL);
     const char *ssd1 = "/dev/nvme1n1"; // pcie5
     const char *ssd2 = "/dev/nvme2n1"; // pcie5
@@ -103,52 +103,58 @@ int main()
     // parallel encode and write to ssd
     start = chrono::high_resolution_clock::now();
 
-    #pragma omp parallel sections
-    {
-        #pragma omp section
-        {
-            // printf("thread %d\n", omp_get_thread_num());
-            while(encode_offset.load(std::memory_order_relaxed) < len) 
-            {
-                u8 **in_offset = (u8 **)calloc(k, sizeof(u8*));
-                u8 **out_offset = (u8 **)calloc(m, sizeof(u8*));
-                for (int i = 0; i < k; i++)
-                {
-                    in_offset[i] = in[i] + encode_offset.load(std::memory_order_relaxed);
-                }
-                for (int i = 0; i < m; i++)
-                {
-                    out_offset[i] = out[i] + encode_offset.load(std::memory_order_relaxed);
-                }
-                ec.encode_ptr(in_offset, out_offset, iter_len);
-                encode_offset.fetch_add(iter_len, std::memory_order_release);
-            }
-        }
+    ec.encode_ptr(in, out, len);
+    parallel_write_ssd(in, out, len, 0, k, m);
+
+    // parallel_read_ssd(matrix, len, 0, k, m);
+    // ec.decode_ptr(matrix, err_num, err_list, len);
+
+    // #pragma omp parallel sections
+    // {
+    //     #pragma omp section
+    //     {
+    //         // printf("thread %d\n", omp_get_thread_num());
+    //         while(encode_offset.load(std::memory_order_relaxed) < len) 
+    //         {
+    //             u8 **in_offset = (u8 **)calloc(k, sizeof(u8*));
+    //             u8 **out_offset = (u8 **)calloc(m, sizeof(u8*));
+    //             for (int i = 0; i < k; i++)
+    //             {
+    //                 in_offset[i] = in[i] + encode_offset.load(std::memory_order_relaxed);
+    //             }
+    //             for (int i = 0; i < m; i++)
+    //             {
+    //                 out_offset[i] = out[i] + encode_offset.load(std::memory_order_relaxed);
+    //             }
+    //             ec.encode_ptr(in_offset, out_offset, iter_len);
+    //             encode_offset.fetch_add(iter_len, std::memory_order_release);
+    //         }
+    //     }
         
-        #pragma omp section
-        {
-            int id = omp_get_thread_num();
-            while (write_offset < len)
-            {
-                if (write_offset < encode_offset.load(std::memory_order_acquire))
-                {
-                    u8 **in_offset = (u8 **)calloc(k, sizeof(u8*));
-                    u8 **out_offset = (u8 **)calloc(m, sizeof(u8*));
-                    for (int i = 0; i < k; i++)
-                    {
-                        in_offset[i] = in[i] + write_offset;
-                    }
-                    for (int i = 0; i < m; i++)
-                    {
-                        out_offset[i] = out[i] + write_offset;
-                    }
-                    parallel_write_ssd(in_offset, out_offset, iter_len, write_offset, k, m);
-                    write_offset += iter_len;
-                }
-            }
-        }
-    }
-    #pragma omp taskwait
+    //     #pragma omp section
+    //     {
+    //         int id = omp_get_thread_num();
+    //         while (write_offset < len)
+    //         {
+    //             if (write_offset < encode_offset.load(std::memory_order_acquire))
+    //             {
+    //                 u8 **in_offset = (u8 **)calloc(k, sizeof(u8*));
+    //                 u8 **out_offset = (u8 **)calloc(m, sizeof(u8*));
+    //                 for (int i = 0; i < k; i++)
+    //                 {
+    //                     in_offset[i] = in[i] + write_offset;
+    //                 }
+    //                 for (int i = 0; i < m; i++)
+    //                 {
+    //                     out_offset[i] = out[i] + write_offset;
+    //                 }
+    //                 parallel_write_ssd(in_offset, out_offset, iter_len, write_offset, k, m);
+    //                 write_offset += iter_len;
+    //             }
+    //         }
+    //     }
+    // }
+    // #pragma omp taskwait
 
     _end = chrono::high_resolution_clock::now();
     chrono::duration<double> _duration = _end - start;

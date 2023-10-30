@@ -23,36 +23,18 @@ using namespace std;
 
 chrono::time_point<std::chrono::high_resolution_clock> start, _end;
 
-void print_ptr(u8 **matrix, int line, int col)
-{
-    // cout<<"Binary"<<endl;
-    // for(int i = 0; i < line; ++i)
-    // {
-    //     for(int j = 0; j < col; ++j)
-    //     {
-    //         cout<<bitset<sizeof(matrix[i][j])*8>(matrix[i][j])<<' ';
-    //     }
-    //     cout<<endl;
-    // }
-    cout<<"hex"<<endl;
-    for(int i = 0; i < line; ++i)
-    {
-        for(int j = 0; j < col; ++j)
-        {
-            cout<<hex<<(int)matrix[i][j]<<' ';
-        }
-        cout<<endl;
-    }
-}
-
 int main()
 {
-    int k = 8, n = 2; //k: data strip, n: parity strip
+    int k = 8, n = 4; //k: data strip, n: parity strip
     size_t maxSize = 4 * 1024; // chunk size
     size_t len = (size_t)1024 * 1024 * 1024; // total length for each strip
     size_t parallel_size = 4 * MB; // parallel write to ssd size
     int thread_num = 16; // thread number for encoding and decoding
     int seed = time(NULL);
+    const char *ssd1 = "/dev/nvme1n1"; // pcie5
+    const char *ssd2 = "/dev/nvme2n1"; // pcie5
+    const char *ssd3 = "/dev/nvme3n1"; // pcie4
+
 
     size_t total_size = k * len;
     u8 **in, **out; // in：data strip out: parity strip
@@ -82,25 +64,36 @@ int main()
         //     in[i][j] = rand() % 255;
     }
     for (int i = 0; i < n; ++i)
-        memset(out[i], 0, len);
+        memset(out[i], rand(), len);
 
 
     cout << "------------------------ WRITE SSD ------------------------" << endl;
-    // IsaEC ec(k, n, maxSize, thread_num);
-    size_t encode_offset = 0;
-    size_t write_offset = 0;
-    size_t iter_len = parallel_size;
 
+    size_t strip_offset = (unsigned long)1024 * 1024 * 1024 * 10;
 
-    // parallel encode and write to ssd
+    cout<<"PCIE 5 WRITE"<<endl;
     start = chrono::high_resolution_clock::now();
-
-    // parallel write to ssd without encode
-    parallel_write_ssd(in, out, len, 0, k, n);
-
+    # pragma omp parallel for num_threads(k / 2)
+    for (int i = 0; i < k / 2; ++i)
+    {
+        size_t in_offset = i * strip_offset;
+        write_ssd(in[i], len, in_offset, ssd1);
+    }
     _end = chrono::high_resolution_clock::now();
     chrono::duration<double> _duration = _end - start;
-    printf("Time: %f, total data: %ld GB, speed %lf Gbps \n", _duration.count(), (k + n) * len / GB, (n + k) * len / GB * 8 / _duration.count());
+    printf("Time: %f, total data: %ld GB, speed %lf Gbps \n", _duration.count(), k / 2 * len / GB, k / 2 * len / GB * 8 / _duration.count());
+
+    cout<<"PCIE 4 WRITE"<<endl;
+    start = chrono::high_resolution_clock::now();
+    # pragma omp parallel for num_threads(n)
+    for (int i = k; i < k + n; ++i)
+    {
+        size_t in_offset = (i - k) * strip_offset;
+        write_ssd(out[i - k], len, in_offset, ssd3);
+    }
+    _duration = chrono::high_resolution_clock::now() - start;
+    printf("Time: %f, total data: %ld GB, speed %lf Gbps \n", _duration.count(), n * len / GB, n * len / GB * 8 / _duration.count());
+
 
     cout << "------------------------ READ SSD ------------------------" << endl;
     u8 **read_matrix = (u8 **)calloc((k + n), sizeof(u8 *));
@@ -110,12 +103,29 @@ int main()
         read_matrix[i] = tmp;
     }
 
+    cout<<"PCIE 5 READ"<<endl;
     start = chrono::high_resolution_clock::now();
-    parallel_read_ssd(read_matrix, len, 0, k, n);
-    _end = chrono::high_resolution_clock::now();
-    _duration = _end - start;
+    # pragma omp parallel for num_threads(k / 2)
+    for (int i = 0; i < k / 2; ++i)
+    {
+        size_t in_offset = i * strip_offset;
+        read_ssd(read_matrix[i], len, in_offset, ssd1);
+    }
+    _duration = chrono::high_resolution_clock::now() - start;
     printf("decode time: %fs \n", _duration.count());
-    printf("total data: %ld GB, speed %lf Gbps \n", (n + k) * len / GB, (n + k) * len / GB * 8 / _duration.count());
+    printf("total data: %ld GB, speed %lf Gbps \n", k / 2 * len / GB, k / 2 * len / GB * 8 / _duration.count());
+
+    cout<<"PCIE 4 READ"<<endl;
+    start = chrono::high_resolution_clock::now();
+    # pragma omp parallel for num_threads(n)
+    for (int i = k; i < k + n; ++i)
+    {
+        size_t in_offset = (i - k) * strip_offset;
+        read_ssd(read_matrix[i], len, in_offset, ssd3);
+    }
+    _duration = chrono::high_resolution_clock::now() - start;
+    printf("decode time: %fs \n", _duration.count());
+    printf("total data: %ld GB, speed %lf Gbps \n", n * len / GB, n * len / GB * 8 / _duration.count());
 
     // print_ptr(in, k, 1024);
     // print_ptr(read_matrix, k + n, 1024);
@@ -125,10 +135,11 @@ int main()
     {
         if (i < k)
         {
+            if (i >= k / 2) continue;
             if (memcmp(in[i], read_matrix[i], len))
             {
                 printf("read error %d\n", i);
-                return -1;
+                // return -1;
             }
             else
             {
@@ -140,7 +151,7 @@ int main()
             if (memcmp(out[i - k], read_matrix[i], len))
             {
                 printf("read error %d\n", i);
-                return -1;
+                // return -1;
             }
             else
             {

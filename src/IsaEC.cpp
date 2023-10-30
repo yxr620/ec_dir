@@ -253,8 +253,8 @@ For pcie4.0 split ssd to 2 parts, each starts at 0, 10G.
 bool parallel_write_ssd(u8 **in, u8 **out, size_t size, size_t offset, int k, int n)
 {
     const char *ssd1 = "/dev/nvme1n1"; // pcie5
-    const char *ssd2 = "/dev/nvme2n1"; // pcie5
-    const char *ssd3 = "/dev/nvme3n1"; // pcie4
+    const char *ssd2 = "/dev/nvme3n1"; // pcie5
+    const char *ssd3 = "/dev/nvme4n1"; // pcie4
 
     size_t strip_offset = (unsigned long)1024 * 1024 * 1024 * 10;
     # pragma omp parallel for num_threads(k + n)
@@ -308,8 +308,8 @@ bool read_ssd(u8 *data, size_t size, size_t offset, const char *ssd_name)
 bool parallel_read_ssd(u8 **matrix, size_t size, size_t offset, int k, int n)
 {
     const char *ssd1 = "/dev/nvme1n1"; // pcie5
-    const char *ssd2 = "/dev/nvme2n1"; // pcie5
-    const char *ssd3 = "/dev/nvme3n1"; // pcie4
+    const char *ssd2 = "/dev/nvme3n1"; // pcie5
+    const char *ssd3 = "/dev/nvme4n1"; // pcie4
 
     size_t strip_offset = (unsigned long)1024 * 1024 * 1024 * 10;
     # pragma omp parallel for num_threads(32)
