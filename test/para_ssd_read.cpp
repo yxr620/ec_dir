@@ -49,14 +49,11 @@ void print_ptr(u8 **matrix, int line, int col)
 int main()
 {
     int k = 8, m = 2; //k: data strip, m: parity strip
-    size_t maxSize = 16 * 1024; // chunk size
-    size_t len = (size_t)1024 * 1024 * 1024; // total length for each strip
+    size_t maxSize = 1024 * 1024; // chunk size
+    size_t len = (size_t)1024 * 1024 * 1024 * 1; // total length for each strip
     size_t parallel_size = 4 * MB; // parallel write to ssd size
-    int thread_num = 16; // thread number for encoding and decoding
+    int thread_num = 32; // thread number for encoding and decoding
     int seed = time(NULL);
-    const char *ssd1 = "/dev/nvme1n1"; // pcie5
-    const char *ssd2 = "/dev/nvme2n1"; // pcie5
-    const char *ssd3 = "/dev/nvme3n1"; // pcie4
 
 
     size_t total_size = k * len;
@@ -230,12 +227,13 @@ int main()
 
     cout << "------------------------ DECODE ------------------------" << endl;
     // parallel read
+    // parallel_read_ssd(matrix, len, 0, k, m);
     start = chrono::high_resolution_clock::now();
     parallel_read_ssd(matrix, len, 0, k, m);
 
-    ec.decode_ptr(matrix, err_num, err_list, len);
+    // ec.decode_ptr(matrix, err_num, err_list, len);
     _end = chrono::high_resolution_clock::now();
-
+    ec.decode_ptr(matrix, err_num, err_list, len);
     _duration = _end - start;
     printf("decode time: %fs \n", _duration.count());
     printf("total data: %ld GB, speed %lf Gbps \n", (m + k) * len / GB, (m + k) * len / GB / _duration.count() * 8);
